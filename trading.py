@@ -104,6 +104,9 @@ async def place_order(exchange, symbol, side, price, size, retry_count=3):
     """
     for attempt in range(retry_count):
         try:
+            # FORCE DEBUG VISIBILITY (Moved to top)
+            logger.error(f"⚠️ DEBUG PROBE ENTRY: Side={side} | RawSize={size} (type {type(size)}) | RawPrice={price}")
+            
             # Use CCXT's built-in precision handling (returns string)
             # This is safer than manual int/float casting for Bybit V5
             formatted_size = exchange.amount_to_precision(symbol, size)
