@@ -142,9 +142,9 @@ DATA_UPDATE_INTERVAL = 60  # Update historical data every 60 seconds
 # ============================================================================
 
 # Spread settings (optimized for fees)
-MIN_SPREAD_PCT = 0.01   # 0.01% minimum (Very tight for high volume)
-MAX_SPREAD_PCT = 0.05   # 0.05% maximum
-TARGET_SPREAD_MULTIPLIER = 0.5  # Target 50% of current spread (Aggressive)
+MIN_SPREAD_PCT = 0.002   # 0.002% minimum (Extreme tight execution)
+MAX_SPREAD_PCT = 0.02    # 0.02% maximum
+TARGET_SPREAD_MULTIPLIER = 0.1  # Target 10% of current spread (Hug the price)
 
 # ============================================================================
 # POSITION & RISK MANAGEMENT
