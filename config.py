@@ -120,8 +120,9 @@ symbol = 'SOL/USDT:USDT'  # ETH Futures
 base_symbol = 'ETHUSDT'  # Format untuk beberapa API calls
 
 # Leverage Settings
-LEVERAGE = 4  # Leverage (Note: May be pre-configured in demo, cannot change)
-MAX_LEVERAGE = 5  # Max limit
+# Leverage Settings
+LEVERAGE = 10  # Increased to 10x (User Request)
+MAX_LEVERAGE = 12  # Max limit
 
 # ============================================================================
 # ORDER SETTINGS
@@ -151,8 +152,9 @@ TARGET_SPREAD_MULTIPLIER = 0.5  # Target 50% of current spread
 # ============================================================================
 
 # Position limits
-MAX_POSITION_SIZE_USD = 70  # Max $70 position
-POSITION_REBALANCE_THRESHOLD_USD = 35  # Rebalance when exceeds $35
+# Position limits
+MAX_POSITION_SIZE_USD = 200  # Increased to $200 (Allows ~13 orders of 0.1 SOL)
+POSITION_REBALANCE_THRESHOLD_USD = 100  # Rebalance when exceeds $100
 POSITION_CHECK_INTERVAL = 10  # Check position every 10 seconds
 
 # Order size limits
@@ -162,8 +164,9 @@ MAX_ORDER_SIZE_USD = 25  # Increased slightly
 BASE_ORDER_SIZE_USD = 15  # Base 0.1 SOL
 
 # Risk limits
-MAX_DAILY_LOSS_USD = -15   # Stop if lose $15/day
-MAX_TOTAL_LOSS_USD = -25   # Emergency stop at $25 loss
+# Risk limits
+MAX_DAILY_LOSS_USD = -50   # Increased risk tolerance
+MAX_TOTAL_LOSS_USD = -80   # Emergency stop at $80 loss
 STOP_LOSS_PCT = 4.0        # 4% stop loss per position
 TAKE_PROFIT_PCT = 0.002    # 0.2% Take Profit (Covers ~0.12% fees + profit)
 
