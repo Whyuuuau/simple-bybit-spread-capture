@@ -52,12 +52,12 @@ exchange = ccxt.bybit({
 # CRITICAL: Use set_markets to populate all internal structures (ids, symbols, etc.) correctly
 # This fixes the 'KeyError: 0' issue in safe_market
 market_info = {
-    'id': 'ETHUSDT',
-    'symbol': 'ETH/USDT:USDT',
-    'base': 'ETH',
+    'id': 'SOLUSDT',
+    'symbol': 'SOL/USDT:USDT',
+    'base': 'SOL',
     'quote': 'USDT',
     'settle': 'USDT',
-    'baseId': 'ETH',
+    'baseId': 'SOL',
     'quoteId': 'USDT',
     'settleId': 'USDT',
     'type': 'swap',
@@ -78,8 +78,8 @@ market_info = {
     'strike': None,
     'optionType': None,
     'precision': {
-        'amount': 0.001,  # Float for TICK_SIZE mode
-        'price': 0.01,    # Float for TICK_SIZE mode
+        'amount': 0.01,  # Tick size for SOL amount
+        'price': 0.01,   # Tick size for SOL price
         'base': 8,
         'quote': 8,
     },
@@ -89,7 +89,7 @@ market_info = {
             'max': 50,
         },
         'amount': {
-            'min': 0.001,  # Minimum 0.001 ETH
+            'min': 0.1,  # Minimum 0.1 SOL (~$14)
             'max': 1000000,
         },
         'price': {
@@ -116,7 +116,7 @@ exchange.has['fetchMarkets'] = False
 # ============================================================================
 
 # Symbol Configuration
-symbol = 'ETH/USDT:USDT'  # ETH Futures
+symbol = 'SOL/USDT:USDT'  # ETH Futures
 base_symbol = 'ETHUSDT'  # Format untuk beberapa API calls
 
 # Leverage Settings
