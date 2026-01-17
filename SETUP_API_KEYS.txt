@@ -1,0 +1,27 @@
+# 🚀 SETUP API KEYS - Bybit Testnet
+
+## Step 1: Update .env File
+
+**IMPORTANT**: Paste your API keys here!
+
+```env
+# Bybit Testnet API Keys (from screenshot)
+BYBIT_API_KEY=paste_your_api_key_here
+BYBIT_API_SECRET=paste_your_secret_here
+```
+
+## Step 2: Save File
+
+Save this file as `.env` (no extension!) in project folder:
+`e:\TRADE\simple-bybit-spread-capture\.env`
+
+## Next Steps
+
+After saving .env:
+1. Install dependencies: `pip install -r requirements.txt`
+2. Train ML model: `python train_xgboost.py`
+3. Run bot: `python main.py`
+
+---
+
+**Security Note**: .env file is protected by .gitignore - won't be committed to git ✅
