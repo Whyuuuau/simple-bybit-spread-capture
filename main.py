@@ -118,15 +118,16 @@ class HybridVolumeBot:
         self.daily_pnl_start = 0
         self.emergency_stop_triggered = False
         
-        logger.info("=" * 80)
+        logger.info("================================================================================")
         logger.info("🚀 HYBRID VOLUME + PROFIT BOT INITIALIZED")
-        logger.info("=" * 80)
+        logger.info("================================================================================")
         logger.info(f"Symbol: {symbol}")
-        logger.info(f"Leverage: {leverage}x")
-        logger.info(f"Max Position: ${MAX_POSITION_SIZE_USD}")
-        logger.info(f"ML Model: MANDATORY ✅")
-        logger.info(f"Testnet: {'YES' if TESTNET else 'NO ⚠️'}")
-        logger.info("=" * 80)
+        logger.info(f"Leverage: {self.leverage}x")  # ✅ Fixed: use self.leverage
+        logger.info(f"Max Position: ${MAX_POSITION_USD}")
+        logger.info(f"ML Model: {'MANDATORY' if USE_ML_MODEL else 'DISABLED'} ✅")
+        logger.info(f"Testnet: {'YES' if TESTNET else 'NO'}")
+        logger.info("================================================================================")
+        logger.info("")
     
     async def initialize(self):
         """Initialize bot - set leverage, load ML model, etc"""

@@ -41,26 +41,26 @@ def build_xgboost_model(n_features, scale_pos_weight=1.0):
     if not HAS_XGBOOST:
         raise ImportError("XGBoost not installed. Run: pip install xgboost")
     
-    # Optimized parameters for trading
+    # Optimized parameters for trading (IMPROVED!)
     params = {
         # Basic settings
         'objective': 'binary:logistic',
         'eval_metric': ['auc', 'logloss'],
         
-        # Tree parameters
-        'max_depth': 6,              # Deeper trees for complex patterns
+        # Tree parameters (MORE POWERFUL!)
+        'max_depth': 8,              # ✅ Deeper trees for complex patterns (was 6)
         'min_child_weight': 1,       # Minimum samples in leaf
         'gamma': 0.1,                # Minimum loss reduction
         
-        # Learning parameters
-        'learning_rate': 0.1,        # Conservative learning rate
-        'n_estimators': 200,         # Number of trees
+        # Learning parameters (MORE TREES!)
+        'learning_rate': 0.05,       # ✅ Lower LR with more trees (was 0.1)
+        'n_estimators': 500,         # ✅ More trees for better patterns (was 200)
         
-        # Regularization (prevent overfitting!)
-        'reg_alpha': 0.1,           # L1 regularization
-        'reg_lambda': 1.0,          # L2 regularization
-        'colsample_bytree': 0.8,    # Feature sampling
-        'subsample': 0.8,           # Row sampling
+        # Regularization (LESS STRICT - we have more data!)
+        'reg_alpha': 0.05,           # ✅ L1 regularization (was 0.1)
+        'reg_lambda': 0.5,           # ✅ L2 regularization (was 1.0)
+        'colsample_bytree': 0.7,     # ✅ Feature sampling (was 0.8)
+        'subsample': 0.7,            # ✅ Row sampling (was 0.8)
         
         # Other
         'scale_pos_weight': scale_pos_weight,  # Handle class imbalance
@@ -108,17 +108,44 @@ def train_xgboost_model(X_train, y_train, X_test, y_test, model_path='models/'):
     # Build model
     model = build_xgboost_model(X_train.shape[1], scale_pos_weight)
     
-    # Train with early stopping
+    # ================================================================
+    # SMOTE: Fix Class Imbalance! ✅
+    # ================================================================
+    logger.info("Applying SMOTE to balance classes...")
+    
+    try:
+        from imblearn.over_sampling import SMOTE
+        
+        # Apply SMOTE
+        smote = SMOTE(random_state=42, k_neighbors=min(5, pos_samples-1) if pos_samples > 1 else 1)
+        X_train_balanced, y_train_balanced = smote.fit_resample(X_train, y_train)
+        
+        pos_after = y_train_balanced.sum()
+        logger.info(f"✅ SMOTE applied:")
+        logger.info(f"   Before: {pos_samples}/{len(y_train)} positive ({pos_samples/len(y_train)*100:.1f}%)")
+        logger.info(f"   After: {pos_after}/{len(y_train_balanced)} positive ({pos_after/len(y_train_balanced)*100:.1f}%)")
+        logger.info(f"   Generated {pos_after - pos_samples} synthetic samples")
+        
+    except ImportError:
+        logger.warning("⚠️ SMOTE not available. Run: pip install imbalanced-learn")
+        logger.warning("   Training without SMOTE (may have poor recall for profitable trades)")
+        X_train_balanced = X_train
+        y_train_balanced = y_train
+    
+    # ================================================================
+    # Train Model
+    # ================================================================
+    logger.info("Training XGBoost classifier...")
     model.fit(
-        X_train, y_train,
-        eval_set=[(X_train, y_train), (X_test, y_test)],
-        early_stopping_rounds=20,
-        verbose=True
+        X_train_balanced, y_train_balanced,  # Use balanced data!
+        eval_set=[(X_test, y_test)],
+        verbose=False
+        # early_stopping_rounds removed - deprecated in XGBoost 2.0+
     )
     
     # Evaluate
-    train_score = model.score(X_train, y_train)
-    test_score = model.score(X_test, y_test)
+    train_pred = model.predict(X_train)
+    test_pred = model.predict(X_test)
     
     # Get probabilities for AUC
     from sklearn.metrics import roc_auc_score, classification_report

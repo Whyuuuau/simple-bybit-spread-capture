@@ -128,12 +128,13 @@ TARGET_VOLUME_PER_DAY = 70000   # Target $70k volume/day ($1M in 14 days!)
 # ML MODEL SETTINGS
 # ============================================================================
 
-USE_ML_MODEL = True  # Enable ML for profit mode
-ML_UPDATE_INTERVAL = 60  # Update prediction every 60 seconds
-ML_LOOKBACK_PERIOD = 50  # Lookback for LSTM
-ML_FUTURE_WINDOW = 10  # Predict 10 minutes ahead
-ML_PROFIT_THRESHOLD_PCT = 0.15  # 0.15% profit threshold (above fees!) ✅
-ML_CONFIDENCE_THRESHOLD = 0.6  # Minimum confidence for action
+# ML Model parameters
+USE_ML_MODEL = True
+ML_UPDATE_INTERVAL = 60  # Update ML signal every 60 seconds
+ML_LOOKBACK_PERIOD = 60  # Use 60 recent candles for prediction
+ML_FUTURE_WINDOW = 5  # Predict 5 candles ahead
+ML_PROFIT_THRESHOLD_PCT = 0.08  # ✅ 0.08% profit threshold (better class balance!)
+ML_CONFIDENCE_THRESHOLD = 0.60  # 60% confidence to act on signal
 
 # ============================================================================
 # FEES & COSTS

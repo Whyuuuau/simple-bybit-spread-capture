@@ -196,6 +196,34 @@ def add_features(data):
         df['body_ratio'] = df['body'] / ((df['high'] - df['low']) + 1e-10)
         
         # ================================================================
+        # IMPROVED FEATURES (for better accuracy!) ✅
+        # ================================================================
+        
+        # Price momentum (multiple timeframes)
+        df['momentum_5'] = df['close'].pct_change(5)
+        df['momentum_10'] = df['close'].pct_change(10)
+        df['momentum_20'] = df['close'].pct_change(20)
+        
+        # Volume surge detection
+        volume_ma_20 = df['volume'].rolling(20).mean()
+        df['volume_surge'] = (df['volume'] > volume_ma_20 * 1.5).astype(int)
+        
+        # Support/Resistance distance
+        high_20 = df['high'].rolling(20).max()
+        low_20 = df['low'].rolling(20).min()
+        df['distance_to_high'] = (high_20 - df['close']) / (df['close'] + 1e-10)
+        df['distance_to_low'] = (df['close'] - low_20) / (df['close'] + 1e-10)
+        
+        # Time-based features (for session patterns)
+        df['hour'] = df.index.hour
+        df['is_asian_session'] = ((df['hour'] >= 0) & (df['hour'] < 8)).astype(int)
+        df['is_london_session'] = ((df['hour'] >= 8) & (df['hour'] < 16)).astype(int)
+        df['is_ny_session'] = ((df['hour'] >= 13) & (df['hour'] < 22)).astype(int)
+        
+        # Price position in range
+        df['price_position'] = (df['close'] - low_20) / (high_20 - low_20 + 1e-10)
+        
+        # ================================================================
         # CLEANUP
         # ================================================================
         

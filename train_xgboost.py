@@ -58,12 +58,12 @@ async def main():
         
         # Fetch historical data
         logger.info(f"Fetching historical data for {symbol}...")
-        logger.info("Fetching 10,000 candles for training...")
+        logger.info("Fetching 50,000 candles for training... (more data = better accuracy!)")
         
         historical_data = await fetch_historical_data(
             exchange, 
             symbol, 
-            lookback_period=10000  # ✅ Fixed parameter name
+            lookback_period=50000  # ✅ 50k candles for better training!
         )
         
         if historical_data.empty:
