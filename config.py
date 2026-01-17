@@ -142,9 +142,9 @@ DATA_UPDATE_INTERVAL = 60  # Update historical data every 60 seconds
 # ============================================================================
 
 # Spread settings (optimized for fees)
-MIN_SPREAD_PCT = 0.03   # 0.03% minimum
-MAX_SPREAD_PCT = 0.12   # 0.12% maximum
-TARGET_SPREAD_MULTIPLIER = 0.75  # Target 75% of current spread
+MIN_SPREAD_PCT = 0.01   # 0.01% minimum (Very tight for high volume)
+MAX_SPREAD_PCT = 0.05   # 0.05% maximum
+TARGET_SPREAD_MULTIPLIER = 0.5  # Target 50% of current spread (Aggressive)
 
 # ============================================================================
 # POSITION & RISK MANAGEMENT
@@ -158,7 +158,7 @@ POSITION_CHECK_INTERVAL = 10  # Check position every 10 seconds
 # Order size limits
 MIN_ORDER_SIZE_USD = 10  # Minimum $10 per order
 MAX_ORDER_SIZE_USD = 18  # Maximum $18 per order
-BASE_ORDER_SIZE_USD = 12  # Base $12 per order
+BASE_ORDER_SIZE_USD = 15  # Base $15 per order (Ensures > 0.1 SOL)
 
 # Risk limits
 MAX_DAILY_LOSS_USD = -15   # Stop if lose $15/day
