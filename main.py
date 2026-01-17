@@ -397,7 +397,8 @@ class HybridVolumeBot:
             
         except Exception as e:
             logger.error(f"Error calculating order sizes: {e}")
-            return [BASE_ORDER_SIZE_USD] * num_orders, [BASE_ORDER_SIZE_USD] * num_orders
+            safe_size = 0.1 # Fallback SOL size (safe default)
+            return [safe_size] * num_orders, [safe_size] * num_orders
     
     async def place_orders(self):
         """Place optimized orders based on market conditions"""
@@ -424,14 +425,8 @@ class HybridVolumeBot:
                 PRICE_PRECISION
             )
             
-            # Calculate order sizes
-            buy_sizes_usd, sell_sizes_usd = await self.calculate_order_sizes(position_value)
-            
-            # Convert USD to contracts
-            buy_sizes = [calculate_amount_from_usd(size, price, AMOUNT_PRECISION) 
-                        for size, price in zip(buy_sizes_usd, buy_prices)]
-            sell_sizes = [calculate_amount_from_usd(size, price, AMOUNT_PRECISION)
-                         for size, price in zip(sell_sizes_usd, sell_prices)]
+            # Calculate order sizes (returns SOL amounts directly)
+            buy_sizes, sell_sizes = await self.calculate_order_sizes(position_value)
             
             # Create target orders
             target_orders = []
