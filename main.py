@@ -347,34 +347,43 @@ class HybridVolumeBot:
             base_size_usd = min(base_size_usd, MAX_ORDER_SIZE_USD / num_orders)
             
             # Adjust based on current position (for rebalancing)
+            # Adjust based on current position (for rebalancing)
             buy_sizes = []
             sell_sizes = []
             
+            # Get current price once for conversion
+            ticker = await self.exchange.fetch_ticker(self.symbol)
+            current_price = (ticker['bid'] + ticker['ask']) / 2
+            
             for i in range(num_orders):
-                buy_size = base_size_usd
-                sell_size = base_size_usd
+                buy_size_usd = base_size_usd
+                sell_size_usd = base_size_usd
                 
                 # If we have a position, adjust to help rebalance
                 if abs(position_value) > 50:
                     if position_value > 0:
                         # Long position - increase sell orders
-                        sell_size *= 1.2
-                        buy_size *= 0.8
+                        sell_size_usd *= 1.2
+                        buy_size_usd *= 0.8
                     else:
                         # Short position - increase buy orders
-                        buy_size *= 1.2
-                        sell_size *= 0.8
+                        buy_size_usd *= 1.2
+                        sell_size_usd *= 0.8
                 
                 # ML signal adjustments
                 if self.current_signal == 'BULLISH':
-                    buy_size *= 1.3
-                    sell_size *= 0.7
+                    buy_size_usd *= 1.3
+                    sell_size_usd *= 0.7
                 elif self.current_signal == 'BEARISH':
-                    sell_size *= 1.3
-                    buy_size *= 0.7
+                    sell_size_usd *= 1.3
+                    buy_size_usd *= 0.7
                 
-                buy_sizes.append(buy_size)
-                sell_sizes.append(sell_size)
+                # Convert USD to ETH amount and round properly
+                buy_amount_eth = round_order_amount(buy_size_usd / current_price, current_price)
+                sell_amount_eth = round_order_amount(sell_size_usd / current_price, current_price)
+                
+                buy_sizes.append(buy_amount_eth)
+                sell_sizes.append(sell_amount_eth)
             
             return buy_sizes, sell_sizes
             

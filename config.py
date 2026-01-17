@@ -49,7 +49,7 @@ exchange = ccxt.bybit({
 # See: https://bybit-exchange.github.io/docs/v5/demo
 
 # Manual market setup for demo (bypass auto-loading)
-# This prevents CCXT from calling unsupported endpoints
+# CRITICAL: Must match CCXT's expected structure exactly
 exchange.markets = {
     'ETH/USDT:USDT': {
         'id': 'ETHUSDT',
@@ -57,6 +57,9 @@ exchange.markets = {
         'base': 'ETH',
         'quote': 'USDT',
         'settle': 'USDT',
+        'baseId': 'ETH',
+        'quoteId': 'USDT',
+        'settleId': 'USDT',
         'type': 'swap',
         'spot': False,
         'margin': False,
@@ -67,22 +70,50 @@ exchange.markets = {
         'contract': True,
         'linear': True,
         'inverse': False,
-        'contractSize': 1,
-        'limits': {
-            'amount': {'min': 0.001, 'max': 1000000},
-            'price': {'min': 0.01, 'max': 1000000},
-            'cost': {'min': 10, 'max': None},
-            'leverage': {'min': 1, 'max': 50},
-        },
+        'taker': 0.0006,
+        'maker': 0.0001,
+        'contractSize': 1.0,
+        'expiry': None,
+        'expiryDatetime': None,
+        'strike': None,
+        'optionType': None,
         'precision': {
-            'amount': 3,
-            'price': 2,
+            'amount': 3,  # 0.001 ETH minimum
+            'price': 2,   # $0.01 minimum
+            'base': 8,
+            'quote': 8,
+        },
+        'limits': {
+            'leverage': {
+                'min': 1,
+                'max': 50,
+            },
+            'amount': {
+                'min': 0.001,  # Minimum 0.001 ETH
+                'max': 1000000,
+            },
+            'price': {
+                'min': 0.01,
+                'max': 1000000,
+            },
+            'cost': {
+                'min': 10,  # Minimum $10 notional
+                'max': None,
+            },
         },
         'info': {}
     }
 }
-exchange.markets_by_id = {'ETHUSDT': exchange.markets['ETH/USDT:USDT']}
+
+# Set market lookups
+exchange.markets_by_id = {
+    'ETHUSDT': exchange.markets['ETH/USDT:USDT']
+}
 exchange.symbols = ['ETH/USDT:USDT']
+exchange.ids = ['ETHUSDT']
+
+# Mark as loaded to prevent auto-loading attempts
+exchange.has['fetchMarkets'] = False
 
 # ============================================================================
 # TRADING PARAMETERS

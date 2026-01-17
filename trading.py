@@ -6,6 +6,38 @@ from logger_config import setup_logger, log_trade
 logger = setup_logger('Trading')
 
 
+def round_order_amount(amount_eth, current_price):
+    """
+    Round order amount to meet exchange requirements
+    
+    Args:
+        amount_eth: Raw ETH amount
+        current_price: Current ETH price
+        
+    Returns:
+        float: Properly rounded amount that meets:
+            - Precision: 3 decimals (0.001 minimum)
+            - Minimum notional: $10
+    """
+    # Round to 3 decimals (exchange precision)
+    rounded_amount = round(amount_eth, 3)
+    
+    # Ensure minimum amount (0.001 ETH)
+    if rounded_amount < 0.001:
+        rounded_amount = 0.001
+    
+    # Check notional value
+    notional_value = rounded_amount * current_price
+    
+    # If notional < $10, increase amount
+    if notional_value < 10:
+        # Calculate ETH needed for $10 notional
+        min_eth_for_10_usd = 10 / current_price
+        rounded_amount = max(round(min_eth_for_10_usd, 3), 0.001)
+    
+    return rounded_amount
+
+
 # ============================================================================
 # MARKET DATA FUNCTIONS
 # ============================================================================
