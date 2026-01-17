@@ -379,8 +379,8 @@ class HybridVolumeBot:
                     buy_size_usd *= 0.7
                 
                 # Convert USD to ETH amount and round properly
-                buy_amount_eth = round_order_amount(buy_size_usd / current_price, current_price)
-                sell_amount_eth = round_order_amount(sell_size_usd / current_price, current_price)
+                buy_amount_eth = calc_sol_size(buy_size_usd / current_price, current_price)
+                sell_amount_eth = calc_sol_size(sell_size_usd / current_price, current_price)
                 
                 buy_sizes.append(buy_amount_eth)
                 sell_sizes.append(sell_amount_eth)

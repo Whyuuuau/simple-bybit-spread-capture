@@ -6,18 +6,16 @@ from logger_config import setup_logger, log_trade
 logger = setup_logger('Trading')
 
 
-def round_order_amount(amount_crypto, current_price):
+def calc_sol_size(amount_crypto, current_price):
     """
-    Round order amount to meet exchange requirements (generic)
+    Calculate SOL size meeting min requirements (0.1 SOL)
     
     Args:
         amount_crypto: Raw crypto amount
         current_price: Current price
         
     Returns:
-        float: Properly rounded amount that meets:
-            - Min value: 0.1 (for SOL) or from config
-            - Min notional: $10
+        float: Rounded amount (>= 0.1)
     """
     # Precision based on TICK_SIZE logic
     # For SOL, precision is 0.01 or 0.1
