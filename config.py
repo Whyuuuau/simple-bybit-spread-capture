@@ -20,8 +20,12 @@ EXCHANGE_NAME = 'bybit'  # ✅ BYBIT
 TESTNET = False  # ✅ MAINNET - Real market prices!
 # NOTE: Training uses PUBLIC API (no auth), Trading uses your API key
 
-# DEMO TRADING - Uses special domain!
-DEMO_TRADING = True  # ✅ Using Bybit Demo Trading (api-demo.bybit.com)
+# TRADING MODE SELECTION
+PAPER_TRADING = True   # ✅ SIMULATE trading with REAL mainnet prices (NO API keys needed!)
+DEMO_TRADING = False   # ❌ Bybit demo API (too limited, don't use)
+
+# Note: If PAPER_TRADING = True, bot uses real market data but simulates all trades
+# This allows testing with real prices without API authentication!
 
 # Initialize exchange
 if EXCHANGE_NAME == 'bitunix':
@@ -43,18 +47,22 @@ if EXCHANGE_NAME == 'bitunix':
         except:
             logger.warning("Bitunix testnet may not be configured - verify manually!")
 
+
 elif EXCHANGE_NAME == 'bybit':
-    # Configure URLs based on demo/testnet mode
+    # Configure URLs based on trading mode
     exchange_config = {
-        'apiKey': api_key,
-        'secret': api_secret,
         'enableRateLimit': True,
         'options': {
             'defaultType': 'linear',
         }
     }
     
-    if DEMO_TRADING:
+    # Add API keys only if NOT paper trading
+    if not PAPER_TRADING:
+        exchange_config['apiKey'] = api_key
+        exchange_config['secret'] = api_secret
+    
+    if DEMO_TRADING and not PAPER_TRADING:
         # Demo Trading uses special domain!
         exchange_config['urls'] = {
             'api': {
@@ -62,11 +70,13 @@ elif EXCHANGE_NAME == 'bybit':
                 'private': 'https://api-demo.bybit.com',
             }
         }
-        # logger.info("🎯 Using Bybit DEMO TRADING domain: api-demo.bybit.com") # Commented out as logger is not defined
-    elif TESTNET:
+    elif TESTNET and not PAPER_TRADING:
         # Testnet mode
         exchange_config['options']['testnet'] = True
-        # logger.info("Using Bybit TESTNET") # Commented out as logger is not defined
+    elif PAPER_TRADING:
+        # Paper trading: use mainnet for REAL prices (public API only)
+        # No API keys needed - public data only!
+        pass  # Default mainnet URLs
     
     exchange = ccxt.bybit(exchange_config)
 

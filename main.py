@@ -30,21 +30,31 @@ from order_book_analyzer import *
 from trading import *
 from data_handler import fetch_historical_data, add_features
 
+# Paper trading support
+from paper_trading import PaperTradingEngine
+
+# ML models
 # Try to import XGBoost model first (preferred)
 try:
     from model_xgboost import (
-        load_xgboost_model, 
-        predict_probability as predict_xgb,
+        load_xgboost_model,
+        predict_probability as predict_xgb, # Keep original alias for now, will adjust later if needed
         get_trading_signal,
         xgboost_model_exists,
-        HAS_XGBOOST
+        HAS_XGBOOST as xgboost_available # Use alias for consistency
     )
-    xgboost_available = HAS_XGBOOST
 except ImportError:
     xgboost_available = False
 
 # Fallback to LSTM
-from model import load_model as load_lstm_model, predict_probability as predict_lstm, model_exists as lstm_model_exists
+try:
+    from model_lstm import (
+        load_lstm_model,
+        predict_probability as predict_lstm, # Keep original alias for now
+        model_exists as lstm_model_exists
+    )
+except ImportError:
+    lstm_model_exists = lambda: False # Define a dummy function if not available
 
 from utils import *
 
