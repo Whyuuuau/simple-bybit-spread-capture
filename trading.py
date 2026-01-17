@@ -317,14 +317,33 @@ class PnLTracker:
         self.buy_positions = []
         self.sell_positions = []
     
-    async def calculate_pnl(self, exchange, symbol):
+    async def calculate_pnl(self, exchange, symbol, paper_engine=None):
         """
         Calculate PnL from filled orders  - ENHANCED with matched trades
+        Supports paper trading mode
+        
+        Args:
+            exchange: CCXT exchange
+            symbol: Trading symbol
+            paper_engine: Optional PaperTradingEngine for paper mode
         
         Returns:
             dict: PnL metrics including matched trade profit
         """
         try:
+            # If paper trading, use paper engine stats
+            if paper_engine:
+                stats = paper_engine.get_stats()
+                return {
+                    'realized_pnl': stats['realized_pnl'],
+                    'total_volume': stats['total_volume'],
+                    'trade_count': stats['total_trades'],
+                    'fees_paid': stats['total_fees'],
+                    'session_high_pnl': stats['peak_balance'] - 100,  # Subtract initial balance
+                    'session_low_pnl': stats['lowest_balance'] - 100,
+                }
+            
+            # Otherwise use real API
             # Get trades (more accurate than orders)
             trades = await exchange.fetch_my_trades(symbol, limit=500)
             

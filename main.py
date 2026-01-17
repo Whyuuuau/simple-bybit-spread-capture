@@ -85,17 +85,23 @@ class HybridVolumeBot:
                 initial_balance=100,  # $100 starting balance for paper trading
                 leverage=LEVERAGE
             )
+            # Use paper position manager
+            from paper_position_manager import PaperPositionManager
+            self.position_manager = PaperPositionManager(
+                paper_engine=self.paper_engine,
+                symbol=self.symbol,
+                leverage=self.leverage
+            )
         else:
             self.paper_engine = None
-        
-        # Position manager for futures
-        self.position_manager = FuturesPositionManager(
-            exchange=self.exchange,
-            symbol=self.symbol,
-            leverage=self.leverage,
-            max_position_usd=MAX_POSITION_SIZE_USD,
-            rebalance_threshold_usd=POSITION_REBALANCE_THRESHOLD_USD
-        )
+            # Use real position manager
+            self.position_manager = FuturesPositionManager(
+                exchange=self.exchange,
+                symbol=self.symbol,
+                leverage=self.leverage,
+                max_position_usd=MAX_POSITION_SIZE_USD,
+                rebalance_threshold_usd=POSITION_REBALANCE_THRESHOLD_USD
+            )
         
         # PnL tracker
         self.pnl_tracker = PnLTracker()
@@ -493,13 +499,17 @@ class HybridVolumeBot:
     async def update_statistics(self):
         """Update trading statistics"""
         try:
-            # Update PnL
-            pnl_data = await self.pnl_tracker.calculate_pnl(self.exchange, self.symbol)
+            # Update PnL (pass paper_engine if in paper mode)
+            pnl_data = await self.pnl_tracker.calculate_pnl(
+                self.exchange, 
+                self.symbol,
+                paper_engine=self.paper_engine if self.paper_trading else None
+            )
             
             self.stats['total_volume'] = pnl_data['total_volume']
             self.stats['total_trades'] = pnl_data['trade_count']
             self.stats['total_fees'] = pnl_data['total_fees']
-            self.stats['net_pnl'] = pnl_data['estimated_pnl']
+            self.stats['net_pnl'] = pnl_data.get('realized_pnl', pnl_data.get('estimated_pnl', 0))
             self.stats['orders_filled'] = pnl_data['trade_count']  # ✅ Track filled orders
             
         except Exception as e:
