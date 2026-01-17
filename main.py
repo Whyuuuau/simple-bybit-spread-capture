@@ -355,6 +355,10 @@ class HybridVolumeBot:
             ticker = await self.exchange.fetch_ticker(self.symbol)
             current_price = (ticker['bid'] + ticker['ask']) / 2
             
+            # DEBUG LOG
+            logger.info(f"🔎 CALC_SIZES: BaseUSD={BASE_ORDER_SIZE_USD} | Price={current_price} | Num={num_orders}")
+
+            
             for i in range(num_orders):
                 buy_size_usd = base_size_usd
                 sell_size_usd = base_size_usd
@@ -382,6 +386,10 @@ class HybridVolumeBot:
                 buy_amount_eth = calc_sol_size(buy_size_usd / current_price, current_price)
                 sell_amount_eth = calc_sol_size(sell_size_usd / current_price, current_price)
                 
+                # LOG FIRST ORDER ONLY
+                if i == 0:
+                    logger.info(f"🔎 CALC_RESULT: BuyUSD={buy_size_usd:.2f} -> Amt={buy_amount_eth} | SellUSD={sell_size_usd:.2f} -> Amt={sell_amount_eth}")
+
                 buy_sizes.append(buy_amount_eth)
                 sell_sizes.append(sell_amount_eth)
             
