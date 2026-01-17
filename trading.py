@@ -11,29 +11,37 @@ def round_order_amount(amount_eth, current_price):
     Round order amount to meet exchange requirements
     
     Args:
-        amount_eth: Raw ETH amount
-        current_price: Current ETH price
+def round_order_amount(amount_crypto, current_price):
+    """
+    Round order amount to meet exchange requirements (generic)
+    
+    Args:
+        amount_crypto: Raw crypto amount
+        current_price: Current price
         
     Returns:
         float: Properly rounded amount that meets:
-            - Precision: 3 decimals (0.001 minimum)
-            - Minimum notional: $10
+            - Min value: 0.1 (for SOL) or from config
+            - Min notional: $10
     """
-    # Round to 3 decimals (exchange precision)
-    rounded_amount = round(amount_eth, 3)
+    # Precision based on TICK_SIZE logic
+    # For SOL, precision is 0.01 or 0.1
+    precision = 2 # 0.01
     
-    # Ensure minimum amount (0.001 ETH)
-    if rounded_amount < 0.001:
-        rounded_amount = 0.001
+    rounded_amount = round(amount_crypto, precision)
+    
+    # Ensure minimum amount (0.1 for SOL, safe default)
+    if rounded_amount < 0.1:
+        rounded_amount = 0.1
     
     # Check notional value
     notional_value = rounded_amount * current_price
     
     # If notional < $10, increase amount
     if notional_value < 10:
-        # Calculate ETH needed for $10 notional
-        min_eth_for_10_usd = 10 / current_price
-        rounded_amount = max(round(min_eth_for_10_usd, 3), 0.001)
+        # Calculate needed amount for $10
+        min_crypto_for_10_usd = 10 / current_price
+        rounded_amount = max(round(min_crypto_for_10_usd, precision), 0.1)
     
     return rounded_amount
 
