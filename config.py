@@ -24,12 +24,16 @@ EXCHANGE_NAME = 'bybit'  # ✅ BYBIT DEMO MAINNET
 # Get API keys from: https://demo.bybit.com/app/user/api-management
 
 # Initialize exchange with demo configuration
+# CRITICAL: Demo API has limited endpoints compared to mainnet
+# We must skip auto market loading to avoid error 10032
 exchange = ccxt.bybit({
     'apiKey': api_key,
     'secret': api_secret,
     'enableRateLimit': True,
     'options': {
         'defaultType': 'linear',  # Perpetual futures
+        'loadMarkets': False,  # Skip auto-loading to avoid /v5/asset/* endpoints
+        'fetchCurrencies': False,  # Skip currency fetching (not available in demo)
     },
     'urls': {
         'api': {
@@ -38,6 +42,47 @@ exchange = ccxt.bybit({
         }
     }
 })
+
+# Note: Demo API limitations
+# ✅ Available: Order, Position, Account wallet, Execution endpoints
+# ❌ Not available: Asset management, Coin info endpoints
+# See: https://bybit-exchange.github.io/docs/v5/demo
+
+# Manual market setup for demo (bypass auto-loading)
+# This prevents CCXT from calling unsupported endpoints
+exchange.markets = {
+    'ETH/USDT:USDT': {
+        'id': 'ETHUSDT',
+        'symbol': 'ETH/USDT:USDT',
+        'base': 'ETH',
+        'quote': 'USDT',
+        'settle': 'USDT',
+        'type': 'swap',
+        'spot': False,
+        'margin': False,
+        'swap': True,
+        'future': False,
+        'option': False,
+        'active': True,
+        'contract': True,
+        'linear': True,
+        'inverse': False,
+        'contractSize': 1,
+        'limits': {
+            'amount': {'min': 0.001, 'max': 1000000},
+            'price': {'min': 0.01, 'max': 1000000},
+            'cost': {'min': 10, 'max': None},
+            'leverage': {'min': 1, 'max': 50},
+        },
+        'precision': {
+            'amount': 3,
+            'price': 2,
+        },
+        'info': {}
+    }
+}
+exchange.markets_by_id = {'ETHUSDT': exchange.markets['ETH/USDT:USDT']}
+exchange.symbols = ['ETH/USDT:USDT']
 
 # ============================================================================
 # TRADING PARAMETERS
@@ -57,6 +102,9 @@ MAX_LEVERAGE = 5  # Max limit
 
 # Number of orders per side
 num_orders = 5
+
+# Order book depth
+ORDER_BOOK_DEPTH = 20  # Number of levels to fetch from order book
 
 # Order refresh settings
 ORDER_REFRESH_INTERVAL = 3  # Refresh every 3 seconds
