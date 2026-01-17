@@ -33,7 +33,7 @@ logger = setup_logger('XGBoostTraining')
 # We only need HISTORICAL DATA which is PUBLIC!
 # No authentication required for market data ✅
 
-exchange = ccxt.bybit({
+exchange = ccxt.async_support.bybit({  # ✅ Use ASYNC version!
     'enableRateLimit': True,
     # NO API keys needed for public data!
 })
@@ -145,7 +145,7 @@ async def main():
         logger.error(f"❌ Training failed: {e}", exc_info=True)
         return False
     finally:
-        await exchange.close()
+        await exchange.close()  # ✅ Close async exchange
 
 
 if __name__ == "__main__":
