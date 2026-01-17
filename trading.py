@@ -101,15 +101,17 @@ async def place_order(exchange, symbol, side, price, size, retry_count=3):
     """
     for attempt in range(retry_count):
         try:
-            # Reverting to float with rounding to ensure CCXT maps it to 'qty' correctly
-            # String formatting 'f"{size:.3f}"' caused "Qty is required" error
-            rounded_size = float(round(size, 3))
-            rounded_price = float(round(price, 2))
+            # Use CCXT's built-in precision handling (returns string)
+            # This is safer than manual int/float casting for Bybit V5
+            formatted_size = exchange.amount_to_precision(symbol, size)
+            formatted_price = exchange.price_to_precision(symbol, price)
+            
+            logger.info(f"DEBUG PLACE ORDER: {side} {formatted_size} @ {formatted_price}")
             
             if side == 'buy':
-                order = await exchange.create_limit_buy_order(symbol, rounded_size, rounded_price)
+                order = await exchange.create_limit_buy_order(symbol, formatted_size, formatted_price)
             elif side == 'sell':
-                order = await exchange.create_limit_sell_order(symbol, rounded_size, rounded_price)
+                order = await exchange.create_limit_sell_order(symbol, formatted_size, formatted_price)
             else:
                 logger.error(f"Invalid order side: {side}")
                 return None
