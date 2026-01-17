@@ -12,13 +12,16 @@ api_key = os.getenv('BYBIT_API_KEY')
 api_secret = os.getenv('BYBIT_API_SECRET')
 
 # ============================================================================
-# EXCHANGE SETUP - BYBIT MAINNET (Real-time prices!) ✅
+# EXCHANGE SETUP - BYBIT MAINNET DEMO (Real-time prices!) ✅
 # ============================================================================
 
 # Exchange selection
 EXCHANGE_NAME = 'bybit'  # ✅ BYBIT
 TESTNET = False  # ✅ MAINNET - Real market prices!
 # NOTE: Training uses PUBLIC API (no auth), Trading uses your API key
+
+# DEMO TRADING - Uses special domain!
+DEMO_TRADING = True  # ✅ Using Bybit Demo Trading (api-demo.bybit.com)
 
 # Initialize exchange
 if EXCHANGE_NAME == 'bitunix':
@@ -41,26 +44,31 @@ if EXCHANGE_NAME == 'bitunix':
             logger.warning("Bitunix testnet may not be configured - verify manually!")
 
 elif EXCHANGE_NAME == 'bybit':
-    if TESTNET:
-        exchange = ccxt.bybit({
-            'apiKey': api_key,
-            'secret': api_secret,
-            'enableRateLimit': True,
-            'options': {
-                'defaultType': 'future',
-                'testnet': True,
+    # Configure URLs based on demo/testnet mode
+    exchange_config = {
+        'apiKey': api_key,
+        'secret': api_secret,
+        'enableRateLimit': True,
+        'options': {
+            'defaultType': 'linear',
+        }
+    }
+    
+    if DEMO_TRADING:
+        # Demo Trading uses special domain!
+        exchange_config['urls'] = {
+            'api': {
+                'public': 'https://api-demo.bybit.com',
+                'private': 'https://api-demo.bybit.com',
             }
-        })
-        exchange.set_sandbox_mode(True)
-    else:
-        exchange = ccxt.bybit({
-            'apiKey': api_key,
-            'secret': api_secret,
-            'enableRateLimit': True,
-            'options': {
-                'defaultType': 'future',
-            }
-        })
+        }
+        # logger.info("🎯 Using Bybit DEMO TRADING domain: api-demo.bybit.com") # Commented out as logger is not defined
+    elif TESTNET:
+        # Testnet mode
+        exchange_config['options']['testnet'] = True
+        # logger.info("Using Bybit TESTNET") # Commented out as logger is not defined
+    
+    exchange = ccxt.bybit(exchange_config)
 
 # ============================================================================
 # TRADING PARAMETERS

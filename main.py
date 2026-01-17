@@ -123,7 +123,7 @@ class HybridVolumeBot:
         logger.info("================================================================================")
         logger.info(f"Symbol: {symbol}")
         logger.info(f"Leverage: {self.leverage}x")  # ✅ Fixed: use self.leverage
-        logger.info(f"Max Position: ${MAX_POSITION_USD}")
+        logger.info(f"Max Position: ${MAX_POSITION_SIZE_USD}")  # ✅ Fixed: correct variable name
         logger.info(f"ML Model: {'MANDATORY' if USE_ML_MODEL else 'DISABLED'} ✅")
         logger.info(f"Testnet: {'YES' if TESTNET else 'NO'}")
         logger.info("================================================================================")
@@ -224,7 +224,7 @@ class HybridVolumeBot:
         except Exception as e:
             logger.error(f"Error updating market data: {e}")
     
-  async def update_ml_signal(self):
+    async def update_ml_signal(self):
         """Update ML trading signal"""
         try:
             if not self.use_ml or not self.ml_model:
