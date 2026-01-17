@@ -82,7 +82,7 @@ class HybridVolumeBot:
         self.paper_trading = PAPER_TRADING
         if self.paper_trading:
             self.paper_engine = PaperTradingEngine(
-                initial_balance=CAPITAL_USD,
+                initial_balance=100,  # $100 starting balance for paper trading
                 leverage=LEVERAGE
             )
         else:
@@ -105,6 +105,7 @@ class HybridVolumeBot:
         self.scaler = None
         self.feature_cols = None
         self.model_type = None
+        self.use_ml = True  # ALWAYS True - ML is mandatory!
         
         # Tracking
         self.last_signal = 'NEUTRAL'
@@ -115,9 +116,36 @@ class HybridVolumeBot:
         
         # Session tracking
         self.session_start = datetime.now()
+        self.session_start_time = datetime.now()  # Alias for compatibility
+        self.start_time = datetime.now()
         self.rebalance_count = 0
         self.daily_pnl_start = 0
         self.emergency_stop_triggered = False
+        
+        # Loop timing
+        self.last_data_update = 0
+        self.last_ml_update = 0
+        self.last_stats_log = 0
+        self.last_position_check = 0
+        
+        # Market data cache
+        self.historical_data = None
+        self.current_signal = 'NEUTRAL'
+        
+        # Statistics
+        self.stats = {
+            'total_volume': 0,
+            'total_trades': 0,
+            'net_pnl': 0,
+            'total_fees': 0,
+            'orders_placed': 0,
+            'orders_filled': 0,
+            'rebalances': 0,
+            'ml_signals': {'BULLISH': 0, 'BEARISH': 0, 'NEUTRAL': 0},
+            'session_high_volume': 0,
+            'session_low_pnl': 0,
+            'session_high_pnl': 0,
+        }
         
         logger.info("=" * 80)
         logger.info("🚀 HYBRID VOLUME + PROFIT BOT INITIALIZED")
