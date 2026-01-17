@@ -49,68 +49,64 @@ exchange = ccxt.bybit({
 # See: https://bybit-exchange.github.io/docs/v5/demo
 
 # Manual market setup for demo (bypass auto-loading)
-# CRITICAL: Must match CCXT's expected structure exactly
-exchange.markets = {
-    'ETH/USDT:USDT': {
-        'id': 'ETHUSDT',
-        'symbol': 'ETH/USDT:USDT',
-        'base': 'ETH',
-        'quote': 'USDT',
-        'settle': 'USDT',
-        'baseId': 'ETH',
-        'quoteId': 'USDT',
-        'settleId': 'USDT',
-        'type': 'swap',
-        'spot': False,
-        'margin': False,
-        'swap': True,
-        'future': False,
-        'option': False,
-        'active': True,
-        'contract': True,
-        'linear': True,
-        'inverse': False,
-        'taker': 0.0006,
-        'maker': 0.0001,
-        'contractSize': 1.0,
-        'expiry': None,
-        'expiryDatetime': None,
-        'strike': None,
-        'optionType': None,
-        'precision': {
-            'amount': 3,  # 0.001 ETH minimum
-            'price': 2,   # $0.01 minimum
-            'base': 8,
-            'quote': 8,
+# CRITICAL: Use set_markets to populate all internal structures (ids, symbols, etc.) correctly
+# This fixes the 'KeyError: 0' issue in safe_market
+market_info = {
+    'id': 'ETHUSDT',
+    'symbol': 'ETH/USDT:USDT',
+    'base': 'ETH',
+    'quote': 'USDT',
+    'settle': 'USDT',
+    'baseId': 'ETH',
+    'quoteId': 'USDT',
+    'settleId': 'USDT',
+    'type': 'swap',
+    'spot': False,
+    'margin': False,
+    'swap': True,
+    'future': False,
+    'option': False,
+    'active': True,
+    'contract': True,
+    'linear': True,
+    'inverse': False,
+    'taker': 0.0006,
+    'maker': 0.0001,
+    'contractSize': 1.0,
+    'expiry': None,
+    'expiryDatetime': None,
+    'strike': None,
+    'optionType': None,
+    'precision': {
+        'amount': 3,  # 0.001 ETH minimum
+        'price': 2,   # $0.01 minimum
+        'base': 8,
+        'quote': 8,
+    },
+    'limits': {
+        'leverage': {
+            'min': 1,
+            'max': 50,
         },
-        'limits': {
-            'leverage': {
-                'min': 1,
-                'max': 50,
-            },
-            'amount': {
-                'min': 0.001,  # Minimum 0.001 ETH
-                'max': 1000000,
-            },
-            'price': {
-                'min': 0.01,
-                'max': 1000000,
-            },
-            'cost': {
-                'min': 10,  # Minimum $10 notional
-                'max': None,
-            },
+        'amount': {
+            'min': 0.001,  # Minimum 0.001 ETH
+            'max': 1000000,
         },
-        'info': {}
-    }
+        'price': {
+            'min': 0.01,
+            'max': 1000000,
+        },
+        'cost': {
+            'min': 10,  # Minimum $10 notional
+            'max': None,
+        },
+    },
+    'info': {}
 }
 
-# Set market lookups
-exchange.markets_by_id = {
-    'ETHUSDT': exchange.markets['ETH/USDT:USDT']
-}
-exchange.symbols = ['ETH/USDT:USDT']
-exchange.ids = ['ETHUSDT']
+# Apply market structure
+# set_markets expects a LIST of market dictionaries
+exchange.set_markets([market_info])
 
 # Mark as loaded to prevent auto-loading attempts
 exchange.has['fetchMarkets'] = False

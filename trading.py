@@ -101,10 +101,18 @@ async def place_order(exchange, symbol, side, price, size, retry_count=3):
     """
     for attempt in range(retry_count):
         try:
+            # Format price and size to string to avoid float precision issues
+            # Using 3 decimals for ETH amount as per simple logic, or use exchange methods
+            formatted_size = f"{float(size):.3f}"
+            formatted_price = f"{float(price):.2f}"
+            
+            # Or better yet, rely on CCXT if market loaded, but we have manual setup
+            # so formatted strings are safest here
+            
             if side == 'buy':
-                order = await exchange.create_limit_buy_order(symbol, size, price)
+                order = await exchange.create_limit_buy_order(symbol, formatted_size, formatted_price)
             elif side == 'sell':
-                order = await exchange.create_limit_sell_order(symbol, size, price)
+                order = await exchange.create_limit_sell_order(symbol, formatted_size, formatted_price)
             else:
                 logger.error(f"Invalid order side: {side}")
                 return None
