@@ -144,16 +144,19 @@ def train_xgboost_model(X_train, y_train, X_test, y_test, model_path='models/'):
     )
     
     # Evaluate
-    train_pred = model.predict(X_train)
+    train_pred = model.predict(X_train_balanced)  # Predict on balanced training data
     test_pred = model.predict(X_test)
+    
+    # Calculate accuracy scores
+    from sklearn.metrics import accuracy_score
+    train_score = accuracy_score(y_train_balanced, train_pred)
+    test_score = accuracy_score(y_test, test_pred)
     
     # Get probabilities for AUC
     from sklearn.metrics import roc_auc_score, classification_report
     
-    y_pred_proba = model.predict_proba(X_test)[:, 1]
-    auc_score = roc_auc_score(y_test, y_pred_proba)
-    
-    y_pred = model.predict(X_test)
+    y_test_proba = model.predict_proba(X_test)[:, 1]
+    auc_score = roc_auc_score(y_test, y_test_proba)
     
     logger.info("=" * 80)
     logger.info("✅ Training Complete!")
@@ -165,7 +168,7 @@ def train_xgboost_model(X_train, y_train, X_test, y_test, model_path='models/'):
     
     # Print classification report
     logger.info("\nClassification Report:")
-    logger.info("\n" + classification_report(y_test, y_pred, target_names=['Not Profitable', 'Profitable']))
+    logger.info("\n" + classification_report(y_test, test_pred, target_names=['Not Profitable', 'Profitable']))  # ✅ Fixed: use test_pred
     
     # Get feature importance
     feature_importance = dict(zip(
