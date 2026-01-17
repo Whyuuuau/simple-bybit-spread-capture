@@ -134,12 +134,25 @@ class HybridVolumeBot:
         try:
             logger.info("🔧 Initializing bot...")
             
-            # Set leverage on exchange
+            # Set leverage on exchange (skip in demo if not supported)
+            from config import DEMO_TRADING
             logger.info(f"Setting leverage to {self.leverage}x...")
-            success = await self.position_manager.set_leverage(self.leverage)
-            if not success:
-                logger.error("Failed to set leverage!")
-                return False
+            try:
+                success = await self.position_manager.set_leverage(self.leverage)
+                if not success:
+                    if DEMO_TRADING:
+                        logger.warning("⚠️ Leverage setting not supported in demo - using default")
+                        logger.info("✅ Demo trading allows continuing with pre-configured leverage")
+                    else:
+                        logger.error("Failed to set leverage!")
+                        return False
+            except Exception as e:
+                if DEMO_TRADING and '10032' in str(e):
+                    logger.warning(f"⚠️ Demo trading limitation: {e}")
+                    logger.info("✅ Continuing with demo's pre-configured leverage setting")
+                else:
+                    logger.error(f"❌ Failed to set leverage: {e}")
+                    return False
             
             # Load ML model (MANDATORY! ✅)
             logger.info("Loading ML model (REQUIRED)...")
