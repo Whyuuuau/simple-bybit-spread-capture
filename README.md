@@ -1,35 +1,35 @@
-# 🚀 Hybrid Volume + Profit Futures Trading Bot
+# 🚀 Bybit Demo Mainnet Trading Bot
 
-Ultimate trading bot untuk **maximum volume + profit** dengan **safety first**!
+Ultimate trading bot untuk **testing trading strategies** di **Bybit Demo Mainnet** dengan **real market prices** dan **virtual balance**!
 
 ## ✨ Features
 
 ### 🎯 Core Features
 
-- ✅ **FUTURES trading** dengan leverage (5x default)
-- ✅ **High-volume generation** (target $50k-1M per hari)
-- ✅ **ML-powered profit signals** (LSTM model)
+- ✅ **DEMO MAINNET trading** dengan virtual balance
+- ✅ **Real market prices** dari Bybit mainnet
+- ✅ **FUTURES trading** dengan leverage
+- ✅ **ML-powered profit signals** (XGBoost/LSTM)
 - ✅ **Auto risk management** & position rebalancing
-- ✅ **Liquidation protection** dengan monitoring real-time
-- ✅ **Smart order management** (minimal cancellations)
-- ✅ **Comprehensive logging** (trades, errors, stats)
+- ✅ **Liquidation protection** monitoring
+- ✅ **Smart order management**
+- ✅ **Comprehensive logging**
 
 ### 🛡️ Safety Features
 
 - ✅ Daily/total loss limits dengan auto-stop
 - ✅ Position size limits dengan leverage consideration
-- ✅ Liquidation distance monitoring (auto-close jika critical)
-- ✅ PnL tracking tanpa double counting
+- ✅ Liquidation distance monitoring
+- ✅ PnL tracking
 - ✅ Emergency shutdown system
-- ✅ Testnet support untuk testing
+- ✅ **ZERO REAL MONEY RISK** - Virtual balance only!
 
 ### 🤖 ML Features
 
-- ✅ LSTM model dengan 19+ technical indicators
+- ✅ XGBoost/LSTM model dengan 19+ technical indicators
 - ✅ Binary classification (profitable vs tidak)
 - ✅ Adaptive order sizing based on confidence
 - ✅ Model persistence (train once, use forever)
-- ✅ Fallback to volume-only mode jika no model
 
 ---
 
@@ -45,7 +45,7 @@ Download Python 3.11 (64-bit) dari [python.org](https://www.python.org/downloads
 ### 2. Clone/Download Project
 
 ```powershell
-cd e:\TRADE\simple-bybit-spread-capture
+cd e:\\TRADE\\simple-bybit-spread-capture
 ```
 
 ### 3. Install Dependencies
@@ -54,38 +54,37 @@ cd e:\TRADE\simple-bybit-spread-capture
 pip install -r requirements.txt
 ```
 
-**Note:** TA-Lib mungkin fail install di Windows. Jika gagal:
+**Note:** TA-Lib mungkin fail install di Windows. Jika gagal, bot akan fallback ke pandas implementation.
 
-1. Download wheel dari: https://www.lfd.uci.edu/~gohlke/pythonlibs/#ta-lib
-2. Install manual: `pip install TA_Lib-0.4.28-cp311-cp311-win_amd64.whl`
-3. Atau skip - bot akan fallback ke pandas implementation
+### 4. Setup Demo API Keys
 
-### 4. Setup API Keys
+**Get Demo API Keys:**
 
-1. Copy `.env.example` ke `.env`:
+1. Create account di https://demo.bybit.com
+2. Login dan pergi ke: https://demo.bybit.com/app/user/api-management
+3. Create API key dengan permissions:
+   - ✅ **Read** - Required
+   - ✅ **Trade (Spot & Derivatives)** - Required
+   - ❌ **Withdraw** - NEVER enable this!
+
+4. Copy `.env.example` ke `.env`:
 
    ```powershell
    copy .env.example .env
    ```
 
-2. Edit `.env` dan isi API keys:
+5. Edit `.env` dan paste API keys:
    ```
-   BYBIT_API_KEY=your_api_key_here
-   BYBIT_API_SECRET=your_api_secret_here
+   BYBIT_API_KEY=your_demo_api_key_here
+   BYBIT_API_SECRET=your_demo_api_secret_here
    ```
-
-**Get Testnet Keys:**
-
-- Bybit Testnet: https://testnet.bybit.com/app/user/api-management
-- Free fake money untuk testing!
 
 **Security Tips:**
 
-- ❌ NEVER share your API keys
+- ✅ Demo keys are safe to use (virtual money only)
+- ✅ Set IP whitelist for extra security
 - ❌ NEVER enable withdrawal permission
-- ✅ Set IP whitelist
-- ✅ Start with testnet
-- ✅ Use separate keys for testnet/mainnet
+- ✅ Use separate keys untuk different bots
 
 ---
 
@@ -94,7 +93,7 @@ pip install -r requirements.txt
 Untuk enable profit mode, train model dulu:
 
 ```powershell
-python train_model.py
+python train_xgboost.py
 ```
 
 **Training time:**
@@ -104,26 +103,22 @@ python train_model.py
 
 **Training output:**
 
-- Model saved di: `models/lstm_model.h5`
+- Model saved di: `models/xgboost_model.pkl`
 - Scaler saved di: `models/scaler.pkl`
 - Features saved di: `models/feature_cols.pkl`
 
 **Jika skip training:**
 
-- Bot akan run dalam **volume-only mode**
-- Tetap bisa generate volume, tapi tanpa ML optimization
+- Bot akan run tanpa ML optimization
+- Tetap bisa generate volume, tapi kurang optimal
 
 ---
 
 ## 🚀 Running the Bot
 
-### Testnet (RECOMMENDED untuk start)
+### Demo Mainnet (DEFAULT)
 
-1. Set `TESTNET = True` di `config.py`:
-
-   ```python
-   TESTNET = True  # START WITH THIS!
-   ```
+1. Pastikan sudah setup demo API keys di `.env`
 
 2. Run bot:
 
@@ -137,18 +132,21 @@ python train_model.py
    - `logs/trades_YYYYMMDD.log`: Trade-only log
    - `logs/errors.log`: Errors only
 
-### Production (⚠️ CAREFUL!)
+### Get More Demo Money
 
-**ONLY after successful testnet testing!**
-
-1. Set `TESTNET = False` di `config.py`
-2. Use mainnet API keys di `.env`
-3. Start dengan **small capital** ($50-100)
-4. Monitor closely untuk 24-48 jam
+Jika demo balance habis, apply for more:
 
 ```powershell
-python main.py
+# Run this to add $100,000 USDT to demo account
+python -c "from config import apply_demo_money; import asyncio; asyncio.run(apply_demo_money('USDT', '100000'))"
 ```
+
+**Available coins dan max amounts:**
+
+- USDT: 100,000
+- USDC: 100,000
+- ETH: 200
+- BTC: 15
 
 ---
 

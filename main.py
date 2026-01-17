@@ -30,9 +30,6 @@ from order_book_analyzer import *
 from trading import *
 from data_handler import fetch_historical_data, add_features
 
-# Paper trading support
-from paper_trading import PaperTradingEngine
-
 # ML models
 # Try to import XGBoost model first (preferred)
 try:
@@ -78,30 +75,14 @@ class HybridVolumeBot:
         self.leverage = LEVERAGE
         self.running = False
         
-        # Paper trading mode
-        self.paper_trading = PAPER_TRADING
-        if self.paper_trading:
-            self.paper_engine = PaperTradingEngine(
-                initial_balance=100,  # $100 starting balance for paper trading
-                leverage=LEVERAGE
-            )
-            # Use paper position manager
-            from paper_position_manager import PaperPositionManager
-            self.position_manager = PaperPositionManager(
-                paper_engine=self.paper_engine,
-                symbol=self.symbol,
-                leverage=self.leverage
-            )
-        else:
-            self.paper_engine = None
-            # Use real position manager
-            self.position_manager = FuturesPositionManager(
-                exchange=self.exchange,
-                symbol=self.symbol,
-                leverage=self.leverage,
-                max_position_usd=MAX_POSITION_SIZE_USD,
-                rebalance_threshold_usd=POSITION_REBALANCE_THRESHOLD_USD
-            )
+        # Demo trading - use real position manager
+        self.position_manager = FuturesPositionManager(
+            exchange=self.exchange,
+            symbol=self.symbol,
+            leverage=self.leverage,
+            max_position_usd=MAX_POSITION_SIZE_USD,
+            rebalance_threshold_usd=POSITION_REBALANCE_THRESHOLD_USD
+        )
         
         # PnL tracker
         self.pnl_tracker = PnLTracker()
@@ -154,14 +135,14 @@ class HybridVolumeBot:
         }
         
         logger.info("=" * 80)
-        logger.info("🚀 HYBRID VOLUME + PROFIT BOT INITIALIZED")
+        logger.info("🚀 BYBIT DEMO TRADING BOT INITIALIZED")
         logger.info("=" * 80)
         logger.info(f"Symbol: {symbol}")
-        logger.info(f"Leverage: {self.leverage}x")  # ✅ Fixed: use self.leverage
-        logger.info(f"Max Position: ${MAX_POSITION_SIZE_USD}")  # ✅ Fixed: correct variable name
-        logger.info(f"ML Model: {'MANDATORY' if USE_ML_MODEL else 'DISABLED'} ✅")
-        logger.info(f"Paper Trading: {'YES 🎯' if PAPER_TRADING else 'NO'}")
-        logger.info(f"Testnet: {'YES' if TESTNET else 'NO'}")
+        logger.info(f"Leverage: {self.leverage}x")
+        logger.info(f"Max Position: ${MAX_POSITION_SIZE_USD}")
+        logger.info(f"ML Model: {'ENABLED' if USE_ML_MODEL else 'DISABLED'}")
+        logger.info(f"Mode: DEMO MAINNET")
+        logger.info(f"API Endpoint: https://api-demo.bybit.com")
         logger.info("=" * 80)
         logger.info("")
     
@@ -170,29 +151,20 @@ class HybridVolumeBot:
         try:
             logger.info("🔧 Initializing bot...")
             
-            # Set leverage on exchange (skip in paper trading or demo if not supported)
-            if self.paper_trading:
-                logger.info("⚡ Paper trading mode - skipping leverage setting")
-                logger.info("✅ Using simulated leverage: {}x".format(self.leverage))
-            else:
-                from config import DEMO_TRADING
-                logger.info(f"Setting leverage to {self.leverage}x...")
-                try:
-                    success = await self.position_manager.set_leverage(self.leverage)
-                    if not success:
-                        if DEMO_TRADING:
-                            logger.warning("⚠️ Leverage setting not supported in demo - using default")
-                            logger.info("✅ Demo trading allows continuing with pre-configured leverage")
-                        else:
-                            logger.error("Failed to set leverage!")
-                            return False
-                except Exception as e:
-                    if DEMO_TRADING and '10032' in str(e):
-                        logger.warning(f"⚠️ Demo trading limitation: {e}")
-                        logger.info("✅ Continuing with demo's pre-configured leverage setting")
-                    else:
-                        logger.error(f"❌ Failed to set leverage: {e}")
-                        return False
+            # Set leverage on demo exchange
+            logger.info(f"Setting leverage to {self.leverage}x...")
+            try:
+                success = await self.position_manager.set_leverage(self.leverage)
+                if not success:
+                    logger.warning("⚠️ Leverage setting may not be supported in demo")
+                    logger.info("✅ Demo uses pre-configured leverage (this is normal)")
+            except Exception as e:
+                if '10032' in str(e):
+                    logger.warning(f"⚠️ Demo trading limitation: {e}")
+                    logger.info("✅ Continuing with demo's pre-configured leverage setting")
+                else:
+                    logger.error(f"❌ Failed to set leverage: {e}")
+                    return False
             
             # Load ML model (MANDATORY! ✅)
             logger.info("Loading ML model (REQUIRED)...")
@@ -499,11 +471,10 @@ class HybridVolumeBot:
     async def update_statistics(self):
         """Update trading statistics"""
         try:
-            # Update PnL (pass paper_engine if in paper mode)
+            # Update PnL
             pnl_data = await self.pnl_tracker.calculate_pnl(
                 self.exchange, 
-                self.symbol,
-                paper_engine=self.paper_engine if self.paper_trading else None
+                self.symbol
             )
             
             self.stats['total_volume'] = pnl_data['total_volume']
