@@ -356,7 +356,7 @@ async def smart_order_management(exchange, symbol, target_orders, price_toleranc
 # ============================================================================
 
 class PnLTracker:
-    """Track PnL properly without double counting - IMPROVED VERSION ✅"""
+    """Track PnL properly without double counting - IMPROVED VERSION"""
     
     def __init__(self):
         self.processed_order_ids = set()
