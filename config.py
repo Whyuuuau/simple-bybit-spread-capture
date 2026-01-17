@@ -128,13 +128,13 @@ MAX_LEVERAGE = 5  # Max limit
 # ============================================================================
 
 # Number of orders per side
-num_orders = 5
+num_orders = 30  # Increased to 30 for dense grid (User Request)
 
 # Order book depth
 ORDER_BOOK_DEPTH = 20  # Number of levels to fetch from order book
 
 # Order refresh settings
-ORDER_REFRESH_INTERVAL = 3  # Refresh every 3 seconds
+ORDER_REFRESH_INTERVAL = 10  # Refresh every 10 seconds (Slower to avoid rate limits with 60 orders)
 DATA_UPDATE_INTERVAL = 60  # Update historical data every 60 seconds
 
 # ============================================================================
@@ -142,9 +142,9 @@ DATA_UPDATE_INTERVAL = 60  # Update historical data every 60 seconds
 # ============================================================================
 
 # Spread settings (optimized for fees)
-MIN_SPREAD_PCT = 0.002   # 0.002% minimum (Extreme tight execution)
-MAX_SPREAD_PCT = 0.02    # 0.02% maximum
-TARGET_SPREAD_MULTIPLIER = 0.1  # Target 10% of current spread (Hug the price)
+MIN_SPREAD_PCT = 0.01   # 0.01% minimum
+MAX_SPREAD_PCT = 0.05   # 0.05% maximum (User Optimized Target)
+TARGET_SPREAD_MULTIPLIER = 0.5  # Target 50% of current spread
 
 # ============================================================================
 # POSITION & RISK MANAGEMENT
@@ -156,14 +156,15 @@ POSITION_REBALANCE_THRESHOLD_USD = 35  # Rebalance when exceeds $35
 POSITION_CHECK_INTERVAL = 10  # Check position every 10 seconds
 
 # Order size limits
-MIN_ORDER_SIZE_USD = 10  # Minimum $10 per order
-MAX_ORDER_SIZE_USD = 18  # Maximum $18 per order
-BASE_ORDER_SIZE_USD = 15  # Base $15 per order (Ensures > 0.1 SOL)
+MIN_ORDER_SIZE_USD = 5   # Reduced to $5
+MAX_ORDER_SIZE_USD = 10  # Reduced to $10
+BASE_ORDER_SIZE_USD = 7.5  # Target ~0.05 SOL
 
 # Risk limits
 MAX_DAILY_LOSS_USD = -15   # Stop if lose $15/day
 MAX_TOTAL_LOSS_USD = -25   # Emergency stop at $25 loss
 STOP_LOSS_PCT = 4.0        # 4% stop loss per position
+TAKE_PROFIT_PCT = 0.002    # 0.2% Take Profit (Covers ~0.12% fees + profit)
 
 # ============================================================================
 # VOLUME TARGETS

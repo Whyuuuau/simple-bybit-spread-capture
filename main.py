@@ -397,7 +397,7 @@ class HybridVolumeBot:
             
         except Exception as e:
             logger.error(f"Error calculating order sizes: {e}")
-            safe_size = 0.1 # Fallback SOL size (safe default)
+            safe_size = 0.05 # Fallback SOL size (safe default for grid)
             return [safe_size] * num_orders, [safe_size] * num_orders
     
     async def place_orders(self):
@@ -466,6 +466,24 @@ class HybridVolumeBot:
                 success = await self.position_manager.rebalance()
                 if success:
                     self.stats['rebalances'] += 1
+            
+            # Check for Take Profit (Fee Adjusted)
+            # Retrieve position details again if needed, or use cached
+            pos_data = await self.position_manager.get_current_position()
+            pnl_pct = 0
+            if pos_data['position_value_usd'] > 0:
+                 # PnL % = Unrealized PnL / Margin (or Value). 
+                 # Better to use PnL / Value for total return check.
+                 # Taking simpler approach: ROI
+                 pnl = pos_data['unrealized_pnl']
+                 val = pos_data['position_value_usd']
+                 pnl_pct = pnl / val if val > 0 else 0
+                 
+                 if pnl_pct > TAKE_PROFIT_PCT:
+                     logger.info(f"💰 TAKE PROFIT TRIGGERED: PnL {pnl_pct*100:.2f}% > {TAKE_PROFIT_PCT*100}% | Net Value: ${pnl:.2f}")
+                     # Close position to realize profit
+                     await self.position_manager.close_all_positions()
+                     logger.info("✅ Profit Secured & Position Reset")
             
             # Check liquidation risk
             risk = await self.position_manager.check_liquidation_risk()

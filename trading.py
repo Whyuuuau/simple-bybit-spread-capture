@@ -23,18 +23,12 @@ def calc_sol_size(amount_crypto, current_price):
     
     rounded_amount = round(amount_crypto, precision)
     
-    # Ensure minimum amount (0.1 for SOL, safe default)
-    if rounded_amount < 0.1:
-        rounded_amount = 0.1
+    # Ensure minimum amount (0.01 for SOL to allow smaller grids)
+    if rounded_amount < 0.01:
+        rounded_amount = 0.01
     
-    # Check notional value
+    # Check notional value (Relaxed for grid trading, let exchange reject if <$5)
     notional_value = rounded_amount * current_price
-    
-    # If notional < $10, increase amount
-    if notional_value < 10:
-        # Calculate needed amount for $10
-        min_crypto_for_10_usd = 10 / current_price
-        rounded_amount = max(round(min_crypto_for_10_usd, precision), 0.1)
     
     return rounded_amount
 
