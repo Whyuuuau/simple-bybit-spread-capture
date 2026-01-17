@@ -1,5 +1,7 @@
-# Sensitive
-
+# Sensitive - NEVER commit API keys!
+.env
+*.env
+!.env.example
 
 # ML Models & Data
 models/
@@ -55,3 +57,4 @@ htmlcov/
 # Temporary files
 *.tmp
 *.bak
+.env
