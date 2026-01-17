@@ -296,7 +296,7 @@ def should_cancel_order(order, target_orders, price_tolerance_pct=0.1):
 
 async def smart_order_management(exchange, symbol, target_orders, price_tolerance_pct=0.1):
     """
-    Efficiently manage orders - only cancel/place what's needed
+    Efficiently manage orders.
     
     Args:
         exchange: CCXT exchange instance
