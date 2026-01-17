@@ -6,11 +6,6 @@ from logger_config import setup_logger, log_trade
 logger = setup_logger('Trading')
 
 
-def round_order_amount(amount_eth, current_price):
-    """
-    Round order amount to meet exchange requirements
-    
-    Args:
 def round_order_amount(amount_crypto, current_price):
     """
     Round order amount to meet exchange requirements (generic)
@@ -197,7 +192,7 @@ async def cancel_all_orders(exchange, symbol):
         
         success_count = sum(1 for r in results if r is not None and not isinstance(r, Exception))
         
-        logger.info(f"✅ Cancelled {success_count}/{len(open_orders)} orders")
+        logger.info(f"Cancelled {success_count}/{len(open_orders)} orders")
         return success_count
         
     except Exception as e:
@@ -459,7 +454,7 @@ class PnLTracker:
     def _calculate_matched_pnl(self):
         """
         Calculate PnL from matched buy/sell pairs (FIFO)
-        This is the REAL profit tracking ✅
+        This is the REAL profit tracking
         """
         total_matched_pnl = 0
         
@@ -619,7 +614,7 @@ async def execute_profit_take(exchange, symbol, opportunity):
         else:
             order = await exchange.create_market_sell_order(symbol, amount)
         
-        logger.info(f"✅ Profit taken: ${opportunity['profit_pct']:.2f}% | Order ID: {order.get('id')}")
+        logger.info(f"Profit taken: ${opportunity['profit_pct']:.2f}% | Order ID: {order.get('id')}")
         
         return order
         
