@@ -12,12 +12,13 @@ api_key = os.getenv('BYBIT_API_KEY')
 api_secret = os.getenv('BYBIT_API_SECRET')
 
 # ============================================================================
-# EXCHANGE SETUP - CONFIGURED FOR BYBIT TESTNET DEMO ✅
+# EXCHANGE SETUP - BYBIT MAINNET (Real-time prices!) ✅
 # ============================================================================
 
-# Exchange selection (CHANGE THIS to switch exchanges)
-EXCHANGE_NAME = 'bybit'  # ✅ BYBIT for demo testing first!
-TESTNET = True  # ✅ ALWAYS start with testnet!
+# Exchange selection
+EXCHANGE_NAME = 'bybit'  # ✅ BYBIT
+TESTNET = False  # ✅ MAINNET - Real market prices!
+# NOTE: Training uses PUBLIC API (no auth), Trading uses your API key
 
 # Initialize exchange
 if EXCHANGE_NAME == 'bitunix':
@@ -107,7 +108,7 @@ POSITION_REBALANCE_THRESHOLD_USD = 35  # Rebalance when exceeds $35
 POSITION_CHECK_INTERVAL = 10  # Check position every 10 seconds
 
 # Order size limits (AGGRESSIVE sizes!)
-MIN_ORDER_SIZE_USD = 8   # Minimum $8 per order
+MIN_ORDER_SIZE_USD = 10  # Minimum $10 per order (exchange minimum!)
 MAX_ORDER_SIZE_USD = 18  # Maximum $18 per order
 BASE_ORDER_SIZE_USD = 12  # Base $12 per order
 

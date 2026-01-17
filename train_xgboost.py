@@ -14,7 +14,7 @@ Usage:
 import asyncio
 import numpy as np
 from datetime import datetime
-from config import exchange, symbol, ML_LOOKBACK_PERIOD, ML_FUTURE_WINDOW, ML_PROFIT_THRESHOLD_PCT
+from config import symbol, ML_LOOKBACK_PERIOD, ML_FUTURE_WINDOW, ML_PROFIT_THRESHOLD_PCT
 from data_handler import fetch_historical_data, add_features, prepare_lstm_data
 from model_xgboost import (
     train_xgboost_model, 
@@ -23,8 +23,23 @@ from model_xgboost import (
     HAS_XGBOOST
 )
 from logger_config import setup_logger
+import ccxt
 
 logger = setup_logger('XGBoostTraining')
+
+# ============================================================================
+# PUBLIC EXCHANGE (NO API KEY NEEDED FOR TRAINING!)
+# ============================================================================
+# We only need HISTORICAL DATA which is PUBLIC!
+# No authentication required for market data ✅
+
+exchange = ccxt.bybit({
+    'enableRateLimit': True,
+    # NO API keys needed for public data!
+})
+
+logger.info("Using PUBLIC API for training - NO authentication needed!")
+logger.info("This fetches REAL-TIME market data from mainnet!")
 
 
 async def main():
@@ -48,7 +63,7 @@ async def main():
         historical_data = await fetch_historical_data(
             exchange, 
             symbol, 
-            limit=10000
+            lookback_period=10000  # ✅ Fixed parameter name
         )
         
         if historical_data.empty:
