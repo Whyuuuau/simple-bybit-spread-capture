@@ -109,6 +109,7 @@ async def place_order(exchange, symbol, side, price, size, retry_count=3):
             formatted_size = exchange.amount_to_precision(symbol, size)
             formatted_price = exchange.price_to_precision(symbol, price)
             
+            print(f">>> DEBUG RAW: Size={size} (type {type(size)}), Formatted={formatted_size} (type {type(formatted_size)})")
             logger.info(f"DEBUG PLACE ORDER: {side} {formatted_size} @ {formatted_price}")
             
             if side == 'buy':
