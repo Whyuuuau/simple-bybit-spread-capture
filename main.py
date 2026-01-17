@@ -76,6 +76,17 @@ class HybridVolumeBot:
         self.exchange = exchange
         self.symbol = symbol
         self.leverage = LEVERAGE
+        self.running = False
+        
+        # Paper trading mode
+        self.paper_trading = PAPER_TRADING
+        if self.paper_trading:
+            self.paper_engine = PaperTradingEngine(
+                initial_balance=CAPITAL_USD,
+                leverage=LEVERAGE
+            )
+        else:
+            self.paper_engine = None
         
         # Position manager for futures
         self.position_manager = FuturesPositionManager(
