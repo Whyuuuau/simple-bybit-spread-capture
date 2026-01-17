@@ -18,7 +18,9 @@ warnings.filterwarnings('ignore')
 def calculate_rsi(series, period=14):
     """Calculate RSI indicator"""
     try:
-        return abstract.RSI(series, timeperiod=period)
+        rsi_np = abstract.RSI(series, timeperiod=period)
+        # Convert to Series to support .rolling()
+        return pd.Series(rsi_np, index=series.index)
     except:
         # Fallback if TA-Lib not available
         delta = series.diff()
