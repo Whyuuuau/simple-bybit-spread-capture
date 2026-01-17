@@ -128,13 +128,13 @@ MAX_LEVERAGE = 5  # Max limit
 # ============================================================================
 
 # Number of orders per side
-num_orders = 30  # Increased to 30 for dense grid (User Request)
+num_orders = 10  # Reduced to 10 (Total 20) to respect Rate Limits with 0.1 SOL size
 
 # Order book depth
 ORDER_BOOK_DEPTH = 20  # Number of levels to fetch from order book
 
 # Order refresh settings
-ORDER_REFRESH_INTERVAL = 10  # Refresh every 10 seconds (Slower to avoid rate limits with 60 orders)
+ORDER_REFRESH_INTERVAL = 15  # Refresh every 15 seconds (Even slower for stability)
 DATA_UPDATE_INTERVAL = 60  # Update historical data every 60 seconds
 
 # ============================================================================
@@ -156,9 +156,10 @@ POSITION_REBALANCE_THRESHOLD_USD = 35  # Rebalance when exceeds $35
 POSITION_CHECK_INTERVAL = 10  # Check position every 10 seconds
 
 # Order size limits
-MIN_ORDER_SIZE_USD = 5   # Reduced to $5
-MAX_ORDER_SIZE_USD = 10  # Reduced to $10
-BASE_ORDER_SIZE_USD = 7.5  # Target ~0.05 SOL
+# Order size limits
+MIN_ORDER_SIZE_USD = 15   # Must be >= 0.1 SOL (~$15)
+MAX_ORDER_SIZE_USD = 25  # Increased slightly
+BASE_ORDER_SIZE_USD = 15  # Base 0.1 SOL
 
 # Risk limits
 MAX_DAILY_LOSS_USD = -15   # Stop if lose $15/day

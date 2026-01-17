@@ -23,9 +23,9 @@ def calc_sol_size(amount_crypto, current_price):
     
     rounded_amount = round(amount_crypto, precision)
     
-    # Ensure minimum amount (0.01 for SOL to allow smaller grids)
-    if rounded_amount < 0.01:
-        rounded_amount = 0.01
+    # Ensure minimum amount (0.1 for SOL, safe default)
+    if rounded_amount < 0.1:
+        rounded_amount = 0.1
     
     # Check notional value (Relaxed for grid trading, let exchange reject if <$5)
     notional_value = rounded_amount * current_price
@@ -319,7 +319,7 @@ async def smart_order_management(exchange, symbol, target_orders, price_toleranc
     # Place missing orders
     await asyncio.sleep(0.5)  # Small delay after cancellations
     
-    place_tasks = []
+    tasks_to_run = []
     for target in target_orders:
         # Check if this order already exists
         exists = False
@@ -331,13 +331,21 @@ async def smart_order_management(exchange, symbol, target_orders, price_toleranc
                     break
         
         if not exists:
-            place_tasks.append(
+            tasks_to_run.append(
                 place_order(exchange, symbol, target['side'], target['price'], target['size'])
             )
     
-    if place_tasks:
-        results = await asyncio.gather(*place_tasks, return_exceptions=True)
-        stats['placed'] = sum(1 for r in results if r is not None and not isinstance(r, Exception))
+    # Execute in batches to avoid Rate Limits (10006)
+    # Bybit limit is typically 10/sec per endpoint, but safer with 5 per 0.5s
+    BATCH_SIZE = 5
+    for i in range(0, len(tasks_to_run), BATCH_SIZE):
+        batch = tasks_to_run[i:i + BATCH_SIZE]
+        results = await asyncio.gather(*batch, return_exceptions=True)
+        stats['placed'] += sum(1 for r in results if r is not None and not isinstance(r, Exception))
+        
+        # Throttle between batches
+        if i + BATCH_SIZE < len(tasks_to_run):
+            await asyncio.sleep(0.5)
     
     logger.debug(f"Order management | Kept: {stats['kept']} | Cancelled: {stats['cancelled']} | Placed: {stats['placed']}")
     

@@ -397,7 +397,7 @@ class HybridVolumeBot:
             
         except Exception as e:
             logger.error(f"Error calculating order sizes: {e}")
-            safe_size = 0.05 # Fallback SOL size (safe default for grid)
+            safe_size = 0.1 # Fallback SOL size (safe default)
             return [safe_size] * num_orders, [safe_size] * num_orders
     
     async def place_orders(self):
