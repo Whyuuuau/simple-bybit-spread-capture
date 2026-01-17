@@ -108,8 +108,10 @@ async def place_order(exchange, symbol, side, price, size, retry_count=3):
             # This is safer than manual int/float casting for Bybit V5
             formatted_size = exchange.amount_to_precision(symbol, size)
             formatted_price = exchange.price_to_precision(symbol, price)
+             
+            # FORCE DEBUG VISIBILITY
+            logger.error(f"⚠️ DEBUG PROBE: RawSize={size} | Formatted={formatted_size} | RawPrice={price} | FormattedPrice={formatted_price}")
             
-            print(f">>> DEBUG RAW: Size={size} (type {type(size)}), Formatted={formatted_size} (type {type(formatted_size)})")
             logger.info(f"DEBUG PLACE ORDER: {side} {formatted_size} @ {formatted_price}")
             
             if side == 'buy':
