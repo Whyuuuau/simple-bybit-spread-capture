@@ -78,8 +78,8 @@ market_info = {
     'strike': None,
     'optionType': None,
     'precision': {
-        'amount': 3,  # 0.001 ETH minimum
-        'price': 2,   # $0.01 minimum
+        'amount': 0.001,  # Float for TICK_SIZE mode
+        'price': 0.01,    # Float for TICK_SIZE mode
         'base': 8,
         'quote': 8,
     },
