@@ -93,50 +93,31 @@ class HybridVolumeBot:
         self.ml_model = None
         self.scaler = None
         self.feature_cols = None
-        self.use_ml = True  # ALWAYS True - ML is mandatory!
+        self.model_type = None
         
-        # State tracking
-        self.running = False
-        self.session_start_time = datetime.now()  # Track session start
-        self.start_time = datetime.now()
-        self.last_data_update = 0
-        self.last_ml_update = 0
-        self.last_stats_log = 0
-        self.last_position_check = 0
-        
-        # Statistics
-        self.stats = {
-            'total_volume': 0,
-            'total_trades': 0,
-            'net_pnl': 0,
-            'total_fees': 0,
-            'orders_placed': 0,
-            'orders_filled': 0,
-            'rebalances': 0,
-            'ml_signals': {'BULLISH': 0, 'BEARISH': 0, 'NEUTRAL': 0},
-            'session_high_volume': 0,
-            'session_low_pnl': 0,
-            'session_high_pnl': 0,
-        }
-        
-        # Market data cache
-        self.historical_data = None
-        self.current_signal = 'NEUTRAL'
+        # Tracking
+        self.last_signal = 'NEUTRAL'
         self.signal_confidence = 0
+        self.total_volume = 0
+        self.total_trades = 0
+        self.ml_signal_count = {'BULLISH': 0, 'NEUTRAL': 0, 'BEARISH': 0}
         
-        # Safety limits
+        # Session tracking
+        self.session_start = datetime.now()
+        self.rebalance_count = 0
         self.daily_pnl_start = 0
         self.emergency_stop_triggered = False
         
-        logger.info("================================================================================")
+        logger.info("=" * 80)
         logger.info("🚀 HYBRID VOLUME + PROFIT BOT INITIALIZED")
-        logger.info("================================================================================")
+        logger.info("=" * 80)
         logger.info(f"Symbol: {symbol}")
         logger.info(f"Leverage: {self.leverage}x")  # ✅ Fixed: use self.leverage
         logger.info(f"Max Position: ${MAX_POSITION_SIZE_USD}")  # ✅ Fixed: correct variable name
         logger.info(f"ML Model: {'MANDATORY' if USE_ML_MODEL else 'DISABLED'} ✅")
+        logger.info(f"Paper Trading: {'YES 🎯' if PAPER_TRADING else 'NO'}")
         logger.info(f"Testnet: {'YES' if TESTNET else 'NO'}")
-        logger.info("================================================================================")
+        logger.info("=" * 80)
         logger.info("")
     
     async def initialize(self):
@@ -144,25 +125,29 @@ class HybridVolumeBot:
         try:
             logger.info("🔧 Initializing bot...")
             
-            # Set leverage on exchange (skip in demo if not supported)
-            from config import DEMO_TRADING
-            logger.info(f"Setting leverage to {self.leverage}x...")
-            try:
-                success = await self.position_manager.set_leverage(self.leverage)
-                if not success:
-                    if DEMO_TRADING:
-                        logger.warning("⚠️ Leverage setting not supported in demo - using default")
-                        logger.info("✅ Demo trading allows continuing with pre-configured leverage")
+            # Set leverage on exchange (skip in paper trading or demo if not supported)
+            if self.paper_trading:
+                logger.info("⚡ Paper trading mode - skipping leverage setting")
+                logger.info("✅ Using simulated leverage: {}x".format(self.leverage))
+            else:
+                from config import DEMO_TRADING
+                logger.info(f"Setting leverage to {self.leverage}x...")
+                try:
+                    success = await self.position_manager.set_leverage(self.leverage)
+                    if not success:
+                        if DEMO_TRADING:
+                            logger.warning("⚠️ Leverage setting not supported in demo - using default")
+                            logger.info("✅ Demo trading allows continuing with pre-configured leverage")
+                        else:
+                            logger.error("Failed to set leverage!")
+                            return False
+                except Exception as e:
+                    if DEMO_TRADING and '10032' in str(e):
+                        logger.warning(f"⚠️ Demo trading limitation: {e}")
+                        logger.info("✅ Continuing with demo's pre-configured leverage setting")
                     else:
-                        logger.error("Failed to set leverage!")
+                        logger.error(f"❌ Failed to set leverage: {e}")
                         return False
-            except Exception as e:
-                if DEMO_TRADING and '10032' in str(e):
-                    logger.warning(f"⚠️ Demo trading limitation: {e}")
-                    logger.info("✅ Continuing with demo's pre-configured leverage setting")
-                else:
-                    logger.error(f"❌ Failed to set leverage: {e}")
-                    return False
             
             # Load ML model (MANDATORY! ✅)
             logger.info("Loading ML model (REQUIRED)...")
