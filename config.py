@@ -54,8 +54,8 @@ TARGET_SPREAD_MULTIPLIER = 1.0
 # POSITION & RISK MANAGEMENT
 # ============================================================================
 
-MAX_POSITION_SIZE_USD = 450  # Lowered from 600 for safety (Max 90% of 10x leverage on $50 equity)
-POSITION_REBALANCE_THRESHOLD_USD = 250  # Lowered from 300 to trigger earlier rebalance
+MAX_POSITION_SIZE_USD = 200  # Lowered from 450 to prevent margin lock with small equity
+POSITION_REBALANCE_THRESHOLD_USD = 100  # Lowered from 250 to trigger earlier rebalance
 POSITION_CHECK_INTERVAL = 5  
 
 MIN_ORDER_SIZE_USD = 5    # Reduced for smaller 100 START balance

@@ -200,13 +200,42 @@ async def cancel_all_orders(exchange, symbol):
         
         logger.info(f"Cancelling {len(open_orders)} open orders...")
         
+        # METHOD 1: Batch Cancel (Preferred)
+        if hasattr(exchange, 'cancel_orders'):
+            try:
+                # Extract IDs
+                order_ids = [o['id'] for o in open_orders]
+                
+                # Bitunix limit per batch is usually 10-20. Let's safe chunk at 10.
+                CHUNK_SIZE = 10 
+                cleaned_count = 0
+                
+                for i in range(0, len(order_ids), CHUNK_SIZE):
+                    chunk = order_ids[i:i + CHUNK_SIZE]
+                    logger.info(f"💥 Batch cancelling orders: {chunk}")
+                    try:
+                        await exchange.cancel_orders(chunk, symbol)
+                        cleaned_count += len(chunk)
+                        await asyncio.sleep(0.2) # Avoid rate limit
+                    except Exception as e:
+                        logger.error(f"Batch cancel failed for chunk: {e}. Falling back to individual.")
+                        # Fallback for this chunk (Singular)
+                        for oid in chunk:
+                            await cancel_order(exchange, symbol, oid)
+                            
+                return cleaned_count
+                
+            except Exception as e:
+                logger.error(f"Batch cancellation error: {e}. Falling back to iterative.")
+        
+        # METHOD 2: Concurrent Individual Cancel (Fallback)
         # Cancel all orders concurrently
         tasks = [cancel_order(exchange, symbol, order['id']) for order in open_orders]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
         success_count = sum(1 for r in results if r is not None and not isinstance(r, Exception))
         
-        logger.info(f"Cancelled {success_count}/{len(open_orders)} orders")
+        logger.info(f"Cancelled {success_count}/{len(open_orders)} orders (Iterative)")
         return success_count
         
     except Exception as e:

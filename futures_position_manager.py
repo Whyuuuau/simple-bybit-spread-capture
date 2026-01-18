@@ -120,14 +120,20 @@ class FuturesPositionManager:
             
             # Aggregate positions (Netting for Hedge Mode)
             # Bitunix Hedge Mode returns separate rows for LONG and SHORT.
-            # We must sum them to know our true Net Exposure.
+            # CRITICAL FIX: Track BOTH net and gross exposure for proper rebalancing
             
             net_contracts = 0
             net_notional = 0
             net_pnl = 0
             net_margin = 0
             weighted_entry_price = 0
-            highest_liq_price = 0 # Worst case? Or closest?
+            highest_liq_price = 0
+            
+            # NEW: Track individual sides for imbalance detection
+            long_contracts = 0
+            short_contracts = 0
+            long_value_usd = 0
+            short_value_usd = 0
             
             # To calc weighted entry
             total_contracts_abs = 0
@@ -142,20 +148,19 @@ class FuturesPositionManager:
                     net_pnl += pos.get('unrealizedPnl', 0)
                     net_margin += pos.get('initialMargin', 0)
                     
-                    # Notional is usually positive in API, but we treat it as signed for aggregation? 
-                    # No, Value is Value. But "Directional Value" matters.
-                    # Actually, simple Net Contracts is best metric.
+                    # Track individual sides
+                    if contracts > 0:  # Long
+                        long_contracts += contracts
+                        long_value_usd += abs(contracts * current_price)
+                    elif contracts < 0:  # Short
+                        short_contracts += abs(contracts)
+                        short_value_usd += abs(contracts * current_price)
                     
                     # Track weighted entry price
                     size_abs = abs(contracts)
                     if size_abs > 0:
                         weighted_entry_price += (pos.get('entryPrice', 0) * size_abs)
-                        total_contracts_abs += size_abs
-                    
-                    # Liquidation: use the one that is closest to current price (highest risk)
-                    # This is complex. For now, use the one with larger size? 
-                    # Or just 0 if net is 0.
-                    pass 
+                        total_contracts_abs += size_abs 
 
             if not found_any or net_contracts == 0:
                 # No position
@@ -193,9 +198,13 @@ class FuturesPositionManager:
                     'entry_price': avg_entry,
                     'current_price': current_price,
                     'margin_used': net_margin,
-                    'liquidation_price': 0, # Hard to agg liq price in hedge. 
+                    'liquidation_price': 0,  # Complex in hedge mode
                     'side': side,
-                    'leverage': self.leverage
+                    'leverage': self.leverage,
+                    # NEW: Gross exposure tracking for rebalance
+                    'long_value_usd': long_value_usd,
+                    'short_value_usd': short_value_usd,
+                    'gross_exposure_usd': max(long_value_usd, short_value_usd)
                 }
             
             # Record to history
@@ -283,9 +292,13 @@ class FuturesPositionManager:
         position_value = abs(position['position_value_usd'])
         position_size = position['position_size']
         
-        # Check if rebalance needed
-        if not force and position_value < self.rebalance_threshold_usd:
-            logger.debug(f"Rebalance not needed: ${position_value:.2f}")
+        # CRITICAL FIX: Check GROSS exposure (largest side) not NET
+        # This prevents imbalanced positions from avoiding rebalance
+        gross_exposure = position.get('gross_exposure_usd', position_value)
+        
+        # Check if rebalance needed (use GROSS, not NET)
+        if not force and gross_exposure < self.rebalance_threshold_usd:
+            logger.debug(f"Rebalance not needed: Gross ${gross_exposure:.2f} (Net ${position_value:.2f})")
             return False
         
         # Safety check

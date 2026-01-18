@@ -413,6 +413,25 @@ class HybridVolumeBot:
             position = await self.position_manager.get_current_position()
             position_value = position['position_value_usd']
             
+            
+            # 🛑 MARGIN SAFETY CHECK (Added to prevent "Locked Margin" issue)
+            # Fetch balance earlier to check usage
+            try:
+                bal_chk = await self.exchange.fetch_balance()
+                usdt_chk = bal_chk.get('USDT', {})
+                tot = float(usdt_chk.get('total', 0))
+                used = float(usdt_chk.get('used', 0))
+                
+                if tot > 0:
+                    usage = (used / tot) * 100
+                    if usage > 80:
+                        logger.warning(f"🚨 MARGIN CRITICAL: Usage {usage:.1f}% > 80%. HALTING ORDERS.")
+                        await self.trading.cancel_all_orders(self.exchange, self.symbol)
+                        logger.warning("❄️ Cooling down to release margin...")
+                        return
+            except Exception as e:
+                logger.error(f"Margin check failed: {e}")
+            
             # Get market price for size calculations
             bid, ask = await get_market_price(self.exchange, self.symbol)
             mid_price = (bid + ask) / 2
