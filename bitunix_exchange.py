@@ -418,20 +418,19 @@ class BitunixExchange:
         """
         clean_symbol = symbol.replace('/', '').replace(':', '').split('USDT')[0] + 'USDT'
         
-        # Mappings based on Docs
-        # Side: 1=Buy, 2=Sell
-        # OrderType: 1=Limit, 2=Market
-        # Effect: 1=GTC, 2=IOC, 3=FOK
+        # Mappings based on Docs (Corrected via Browser Research)
+        # Side: BUY, SELL (Strings, UPPERCASE)
+        # OrderType: LIMIT, MARKET (Strings, UPPERCASE)
+        # Effect: GTC, IOC, FOK (Strings, UPPERCASE)
         
-        side_map = {'buy': 1, 'sell': 2}
-        type_map = {'limit': 1, 'market': 2}
+        side_map = {'buy': 'BUY', 'sell': 'SELL'}
+        type_map = {'limit': 'LIMIT', 'market': 'MARKET'}
         
         body = {
             'symbol': clean_symbol,
             'side': side_map[side.lower()],
-            'orderType': type_map[type.lower()], # Doc says 'orderType', not 'type'
-            'qty': str(amount),             # Doc says 'qty', not 'amount'
-            'marginCoin': 'USDT',           # Might be needed
+            'orderType': type_map[type.lower()],
+            'qty': str(amount),
             'reduceOnly': True if params.get('reduceOnly') else False
         }
         
@@ -439,7 +438,8 @@ class BitunixExchange:
             if not price:
                 raise Exception("Price required for limit order")
             body['price'] = str(price)
-            body['effect'] = 1 # GTC by default
+            body['effect'] = 'GTC' # Default GTC string
+        
             
         data = await self._request('POST', '/futures/trade/place_order', body=body, signed=True)
         
