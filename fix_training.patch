@@ -1,0 +1,2 @@
+# Line 66: Change limit to lookback_period
+# Line 147-148: Remove exchange.close()
