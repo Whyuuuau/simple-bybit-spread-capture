@@ -307,8 +307,10 @@ class BitunixExchange:
                 current_end_time = oldest_time_in_batch - 1 # Minus 1ms to be safe/exclusive
                 
                 # Optimization: if API returned fewer than we asked, we probably hit the beginning of time
-                if len(batch_ohlcv) < batch_size:
-                    break
+                # REMOVED: Bitunix might cap at 200 even if we ask for 1000. 
+                # We should only break if we get 0 items (handled above).
+                # if len(batch_ohlcv) < batch_size:
+                #    break
                     
         # Final Trim (in case we over-fetched due to batching)
         if len(all_ohlcv) > limit:
