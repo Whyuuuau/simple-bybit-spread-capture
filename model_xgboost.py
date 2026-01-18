@@ -48,13 +48,13 @@ def build_xgboost_model(n_features, scale_pos_weight=1.0):
         'eval_metric': ['auc', 'logloss'],
         
         # Tree parameters (MORE POWERFUL!)
-        'max_depth': 8,              # ✅ Deeper trees for complex patterns (was 6)
+        'max_depth': 6,              # ✅ Optimal depth for noisy data
         'min_child_weight': 1,       # Minimum samples in leaf
         'gamma': 0.1,                # Minimum loss reduction
         
         # Learning parameters (MORE TREES!)
-        'learning_rate': 0.05,       # ✅ Lower LR with more trees (was 0.1)
-        'n_estimators': 500,         # ✅ More trees for better patterns (was 200)
+        'learning_rate': 0.01,       # ✅ Slower learning for robustness
+        'n_estimators': 1000,        # ✅ 1000 trees for fine-grained patterns
         
         # Regularization (LESS STRICT - we have more data!)
         'reg_alpha': 0.05,           # ✅ L1 regularization (was 0.1)

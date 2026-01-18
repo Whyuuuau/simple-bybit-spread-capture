@@ -173,7 +173,7 @@ BASE_ORDER_SIZE_USD = 150  # Target Grid Size $150 (5 orders x $30)
 MAX_DAILY_LOSS_USD = -50   # Increased risk tolerance
 MAX_TOTAL_LOSS_USD = -80   # Emergency stop at $80 loss
 STOP_LOSS_PCT = 4.0        # 4% stop loss per position
-TAKE_PROFIT_PCT = 0.002    # 0.2% Take Profit (Covers ~0.12% fees + profit)
+TAKE_PROFIT_PCT = 0.001    # 0.1% Take Profit (Volume Mode: Quick churn for $1M target)
 
 # ============================================================================
 # VOLUME TARGETS

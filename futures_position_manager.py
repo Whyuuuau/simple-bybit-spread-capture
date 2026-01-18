@@ -6,7 +6,7 @@ from logger_config import setup_logger
 logger = setup_logger('PositionManager')
 
 
-from trading import calc_sol_size
+from trading import calc_sol_size, cancel_all_orders
 
 class FuturesPositionManager:
     """
@@ -143,8 +143,11 @@ class FuturesPositionManager:
                 position_size = position['contracts']
                 position_value_usd = abs(position['notional'])
                 
-                # Determine side
-                if position_size > 0:
+                # Determine side (Prioritize explicit side field for Bybit V5)
+                # CCXT usually returns 'long'/'short' in side field, while contracts is absolute
+                if position.get('side'):
+                    side = position['side'].lower()
+                elif position_size > 0:
                     side = 'long'
                 elif position_size < 0:
                     side = 'short'
@@ -261,6 +264,11 @@ class FuturesPositionManager:
         try:
             logger.info(f"🔄 Rebalancing position: ${position_value:.2f} {position['side'].upper()}")
             
+            # CRITICAL: Cancel existing orders to free up position/margin
+            await cancel_all_orders(self.exchange, self.symbol)
+            # Short sleep to ensure cancellation propagates
+            await asyncio.sleep(0.5)
+            
             # Calculate amount to close (90% to avoid over-closing)
             raw_amount = abs(position_size) * 0.9
             approx_price = position_value / abs(position_size) if abs(position_size) > 0 else 0
@@ -272,23 +280,50 @@ class FuturesPositionManager:
                 return False
             
             # Close position with opposite order
-            if position['side'] == 'long':
-                # Close long = sell
-                order = await self.exchange.create_market_sell_order(
-                    self.symbol,
-                    amount_to_close,
-                    params={'reduceOnly': True}  # Important: reduce only, don't reverse
-                )
-                logger.info(f"✅ Closed LONG position: {amount_to_close} contracts")
-            
-            elif position['side'] == 'short':
-                # Close short = buy
-                order = await self.exchange.create_market_buy_order(
-                    self.symbol,
-                    amount_to_close,
-                    params={'reduceOnly': True}
-                )
-                logger.info(f"✅ Closed SHORT position: {amount_to_close} contracts")
+            try:
+                if position['side'] == 'long':
+                    # Close long = sell
+                    action = 'sell'
+                    order = await self.exchange.create_market_sell_order(
+                        self.symbol,
+                        amount_to_close,
+                        params={'reduceOnly': True}
+                    )
+                    logger.info(f"✅ Closed LONG position: {amount_to_close} contracts")
+                
+                elif position['side'] == 'short':
+                    # Close short = buy
+                    action = 'buy'
+                    order = await self.exchange.create_market_buy_order(
+                        self.symbol,
+                        amount_to_close,
+                        params={'reduceOnly': True}
+                    )
+                    logger.info(f"✅ Closed SHORT position: {amount_to_close} contracts")
+                    
+            except Exception as e:
+                # Handle 110017 (reduce-only order has same side with current position)
+                # This happens if bot thinks Long but actual is Short (or vice versa)
+                if "110017" in str(e) or "reduce-only" in str(e):
+                    logger.warning(f"⚠️ Side Mismatch Detected! Flipping action... (Error: {str(e)[:100]})")
+                    
+                    if position['side'] == 'long': # Was sell, try buy
+                        order = await self.exchange.create_market_buy_order(
+                            self.symbol,
+                            amount_to_close,
+                            params={'reduceOnly': True}
+                        )
+                        logger.info(f"✅ Retry Successful: Closed SHORT position (flipped)")
+                        
+                    else: # Was buy, try sell
+                        order = await self.exchange.create_market_sell_order(
+                            self.symbol,
+                            amount_to_close,
+                            params={'reduceOnly': True}
+                        )
+                        logger.info(f"✅ Retry Successful: Closed LONG position (flipped)")
+                else:
+                    raise e
             
             self.rebalance_count += 1
             self.last_rebalance_time = datetime.now()
@@ -381,8 +416,11 @@ class FuturesPositionManager:
         }
     
     async def emergency_close_all(self):
-        """Emergency close all positions"""
+        """Emergency close all positions (Smart Retry Enabled)"""
         logger.warning("🚨 EMERGENCY POSITION CLOSE INITIATED!")
+        
+        # Cancel all pending orders first to free up inventory
+        await cancel_all_orders(self.exchange, self.symbol)
         
         try:
             position = await self.get_current_position()
@@ -396,20 +434,32 @@ class FuturesPositionManager:
             # Enforce precision
             position_size = calc_sol_size(position_size, 1.0) # Price dummy
             
-            if position['side'] == 'long':
-                # Close long
-                order = await self.exchange.create_market_sell_order(
-                    self.symbol,
-                    position_size,
-                    params={'reduceOnly': True}
-                )
-            else:
-                # Close short
-                order = await self.exchange.create_market_buy_order(
-                    self.symbol,
-                    position_size,
-                    params={'reduceOnly': True}
-                )
+            try:
+                if position['side'] == 'long':
+                    # Close long
+                    order = await self.exchange.create_market_sell_order(
+                        self.symbol,
+                        position_size,
+                        params={'reduceOnly': True}
+                    )
+                else:
+                    # Close short
+                    order = await self.exchange.create_market_buy_order(
+                        self.symbol,
+                        position_size,
+                        params={'reduceOnly': True}
+                    )
+            except Exception as e:
+                 # Smart Retry for 110017
+                if "110017" in str(e) or "reduce-only" in str(e):
+                    logger.warning("⚠️ Direction Mismatch in Close All! Flipping...")
+                    if position['side'] == 'long':
+                        await self.exchange.create_market_buy_order(self.symbol, position_size, params={'reduceOnly': True})
+                    else:
+                        await self.exchange.create_market_sell_order(self.symbol, position_size, params={'reduceOnly': True})
+                    logger.info("✅ Retry Successful: Closed position (flipped)")
+                else:
+                    raise e
             
             logger.warning(f"✅ Emergency close executed | PnL: ${position['unrealized_pnl']:.2f}")
             return True
@@ -417,3 +467,7 @@ class FuturesPositionManager:
         except Exception as e:
             logger.error(f"❌ Emergency close failed: {e}", exc_info=True)
             return False
+
+    async def close_all_positions(self):
+        """Standard close all positions (Take Profit) - Alias"""
+        return await self.emergency_close_all()

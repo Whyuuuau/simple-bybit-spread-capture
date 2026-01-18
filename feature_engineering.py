@@ -144,8 +144,37 @@ def add_price_patterns(df):
     df['higher_close'] = (df['close'] > df['close'].shift(1)).astype(int)
     
     df['candle_body'] = abs(df['close'] - df['open']) / df['open']
-    df['upper_shadow'] = (df['high'] - df[['open', 'close']].max(axis=1)) / df['open']
     df['lower_shadow'] = (df[['open', 'close']].min(axis=1) - df['low']) / df['open']
+    return df
+
+def add_gacor_features(df):
+    """
+    Add High-Impact 'Gacor' Features for HFT/Scalping
+    Focuses on Velocity, Volume Shocks, and Micro-Volatility
+    """
+    # 1. Micro-Velocity (Rate of Change)
+    df['roc_1'] = df['close'].pct_change(1) * 100
+    df['roc_3'] = df['close'].pct_change(3) * 100
+    df['roc_5'] = df['close'].pct_change(5) * 100
+    
+    # 2. Volume Shock (Relative Volume)
+    vol_ma5 = df['volume'].rolling(5).mean()
+    vol_ma20 = df['volume'].rolling(20).mean()
+    df['vol_shock'] = vol_ma5 / (vol_ma20 + 1e-10)
+    
+    # 3. Candle Range Shock (Volatility Spike)
+    df['candle_range'] = (df['high'] - df['low']) / df['close']
+    range_ma20 = df['candle_range'].rolling(20).mean()
+    df['range_shock'] = df['candle_range'] / (range_ma20 + 1e-10)
+    
+    # 4. Intra-Candle Strength (Where did we close?)
+    # 1.0 = High, 0.0 = Low
+    df['close_loc'] = (df['close'] - df['low']) / ((df['high'] - df['low']) + 1e-10)
+    
+    # 5. Pseudo-VWAP deviation (approximate)
+    typical_price = (df['high'] + df['low'] + df['close']) / 3
+    df['price_vs_typical'] = (df['close'] - typical_price) / typical_price
+    
     return df
 
 def add_all_features(df):
@@ -164,6 +193,7 @@ def add_all_features(df):
     df = add_volume_indicators(df)
     df = add_volatility_indicators(df)
     df = add_price_patterns(df)
+    df = add_gacor_features(df)
     
     # Session features simplified
     if hasattr(df.index, 'hour'):
