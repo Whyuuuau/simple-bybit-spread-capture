@@ -1,11 +1,13 @@
+"""Bitunix Exchange Adapter for CCXT-like interface"""
 import aiohttp
 import asyncio
+import hmac
 import hashlib
 import time
-import json
-import uuid
-import urllib.parse
-from datetime import datetime
+from urllib.parse import urlencode
+from logger_config import setup_logger
+
+logger = setup_logger('BitunixExchange')
 
 class BitunixExchange:
     def __init__(self, config):
