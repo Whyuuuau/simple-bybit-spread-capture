@@ -143,8 +143,8 @@ class FuturesPositionManager:
                 position_size = position['contracts']
                 position_value_usd = abs(position['notional'])
                 
-                # Determine side (Prioritize explicit side field for Bybit V5)
-                # CCXT usually returns 'long'/'short' in side field, while contracts is absolute
+                # Determine side
+                # Standardize side determination
                 if position.get('side'):
                     side = position['side'].lower()
                 elif position_size > 0:

@@ -136,14 +136,13 @@ class HybridVolumeBot:
         }
         
         logger.info("=" * 80)
-        logger.info("🚀 BYBIT DEMO TRADING BOT INITIALIZED")
+        logger.info("🚀 BITUNIX TRADING BOT INITIALIZED")
         logger.info("=" * 80)
         logger.info(f"Symbol: {symbol}")
         logger.info(f"Leverage: {self.leverage}x")
         logger.info(f"Max Position: ${MAX_POSITION_SIZE_USD}")
         logger.info(f"ML Model: {'ENABLED' if USE_ML_MODEL else 'DISABLED'}")
-        logger.info(f"Mode: DEMO MAINNET")
-        logger.info(f"API Endpoint: https://api-demo.bybit.com")
+        logger.info(f"Mode: BITUNIX FUTURES MAINNET")
         logger.info("=" * 80)
         logger.info("")
     
@@ -155,20 +154,15 @@ class HybridVolumeBot:
             # Ensure One-Way Mode (Netting) for Grid Strategy
             await self.position_manager.ensure_one_way_mode()
             
-            # Set leverage on demo exchange
+            # Set leverage
             logger.info(f"Setting leverage to {self.leverage}x...")
             try:
                 success = await self.position_manager.set_leverage(self.leverage)
                 if not success:
-                    logger.warning("⚠️ Leverage setting may not be supported in demo")
-                    logger.info("✅ Demo uses pre-configured leverage (this is normal)")
+                     logger.warning("⚠️ Leverage setting returned False (might differ per exchange)")
             except Exception as e:
-                if '10032' in str(e):
-                    logger.warning(f"⚠️ Demo trading limitation: {e}")
-                    logger.info("✅ Continuing with demo's pre-configured leverage setting")
-                else:
-                    logger.error(f"❌ Failed to set leverage: {e}")
-                    return False
+                logger.error(f"❌ Failed to set leverage: {e}")
+                # Don't return False here, allow to proceed if leverage fails (sometimes manually set)
             
             # Load ML model (MANDATORY! ✅)
             logger.info("Loading ML model (REQUIRED)...")

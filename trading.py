@@ -18,9 +18,10 @@ def calc_sol_size(amount_crypto, current_price):
         float: Rounded amount (>= 0.1)
     """
     # Precision based on TICK_SIZE logic
-    # For SOL on Bybit Futures, precision often defaults to 0.1 or 0.01
-    # Logs show 0.15 failing but 0.1 working -> Precision is likely 0.1 (1 decimal)
-    precision = 1 # 0.1 (Strict Mode)
+    # Precision based on config
+    # Bitunix usually 0.1 or 0.01 for main coins
+    # We use Strict Mode default of 0.1 if not defined 
+    precision = 1
     
     rounded_amount = round(amount_crypto, precision)
     
@@ -100,8 +101,8 @@ async def place_order(exchange, symbol, side, price, size, retry_count=3):
             # FORCE DEBUG VISIBILITY (Moved to top)
             logger.error(f"⚠️ DEBUG PROBE ENTRY: Side={side} | RawSize={size} (type {type(size)}) | RawPrice={price}")
             
-            # Use CCXT's built-in precision handling (returns string)
-            # This is safer than manual int/float casting for Bybit V5
+            # Use exchange's precision handling
+            # This is safer than manual int/float casting
             formatted_size = exchange.amount_to_precision(symbol, size)
             formatted_price = exchange.price_to_precision(symbol, price)
              
@@ -336,8 +337,8 @@ async def smart_order_management(exchange, symbol, target_orders, price_toleranc
                 place_order(exchange, symbol, target['side'], target['price'], target['size'])
             )
     
-    # Execute in batches to avoid Rate Limits (10006)
-    # Bybit limit is typically 10/sec per endpoint, but safer with 5 per 0.5s
+    # Execute in batches to avoid Rate Limits
+    # Bitunix limit is typically generous, but safer with 5 per 0.5s
     BATCH_SIZE = 5
     for i in range(0, len(tasks_to_run), BATCH_SIZE):
         batch = tasks_to_run[i:i + BATCH_SIZE]
@@ -381,7 +382,7 @@ class PnLTracker:
             # Get trades (try provided symbol first)
             trades = await exchange.fetch_my_trades(symbol, limit=500)
             
-            # If empty, try alternative symbol formats (common issue with CCXT/Bybit)
+            # If empty, try alternative symbol formats
             if not trades and ':' in symbol:
                 alt_symbol = symbol.split(':')[0] # e.g. SOL/USDT
                 trades = await exchange.fetch_my_trades(alt_symbol, limit=500)

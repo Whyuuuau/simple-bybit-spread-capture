@@ -8,185 +8,98 @@ load_dotenv()
 # API CONFIGURATION
 # ============================================================================
 
-api_key = os.getenv('BYBIT_API_KEY')
-api_secret = os.getenv('BYBIT_API_SECRET')
+# Bitunix Keys (NEW)
+bitunix_api_key = os.getenv('BITUNIX_API_KEY')
+bitunix_api_secret = os.getenv('BITUNIX_API_SECRET')
 
 # ============================================================================
-# BYBIT DEMO MAINNET SETUP
+# EXCHANGE_SELECTION
 # ============================================================================
 
 # Exchange selection
-EXCHANGE_NAME = 'bybit'  # ✅ BYBIT DEMO MAINNET
+EXCHANGE_NAME = 'bitunix' 
 
-# Demo Trading Configuration
-# Uses Bybit Demo environment with virtual balance
-# Domain: https://api-demo.bybit.com
-# Get API keys from: https://demo.bybit.com/app/user/api-management
+# Initialize exchange based on selection
+exchange = None
 
-# Initialize exchange with demo configuration
-# CRITICAL: Demo API has limited endpoints compared to mainnet
-# We must skip auto market loading to avoid error 10032
-exchange = ccxt.bybit({
-    'apiKey': api_key,
-    'secret': api_secret,
-    'enableRateLimit': True,
-    'options': {
-        'defaultType': 'linear',  # Perpetual futures
-        'loadMarkets': False,  # Skip auto-loading to avoid /v5/asset/* endpoints
-        'fetchCurrencies': False,  # Skip currency fetching (not available in demo)
-    },
-    'urls': {
-        'api': {
-            'public': 'https://api-demo.bybit.com',
-            'private': 'https://api-demo.bybit.com',
-        }
-    }
-})
+try:
+    if EXCHANGE_NAME == 'bitunix':
+        from bitunix_exchange import BitunixExchange
+        exchange = BitunixExchange({
+            'apiKey': bitunix_api_key,
+            'secret': bitunix_api_secret,
+            'options': {
+                'defaultType': 'swap',
+                'price_precision': PRICE_PRECISION,
+                'amount_precision': AMOUNT_PRECISION,
+            }
+        })
+        print("✅ Initialized Bitunix Exchange")
+        
+except Exception as e:
+    print(f"❌ Error initializing exchange: {e}")
+    # Fallback/Safety
+    exchange = None
 
-# Note: Demo API limitations
-# ✅ Available: Order, Position, Account wallet, Execution endpoints
-# ❌ Not available: Asset management, Coin info endpoints
-# See: https://bybit-exchange.github.io/docs/v5/demo
-
-# Manual market setup for demo (bypass auto-loading)
-# CRITICAL: Use set_markets to populate all internal structures (ids, symbols, etc.) correctly
-# This fixes the 'KeyError: 0' issue in safe_market
-market_info = {
-    'id': 'SOLUSDT',
-    'symbol': 'SOL/USDT:USDT',
-    'base': 'SOL',
-    'quote': 'USDT',
-    'settle': 'USDT',
-    'baseId': 'SOL',
-    'quoteId': 'USDT',
-    'settleId': 'USDT',
-    'type': 'swap',
-    'spot': False,
-    'margin': False,
-    'swap': True,
-    'future': False,
-    'option': False,
-    'active': True,
-    'contract': True,
-    'linear': True,
-    'inverse': False,
-    'taker': 0.0006,
-    'maker': 0.0001,
-    'contractSize': 1.0,
-    'expiry': None,
-    'expiryDatetime': None,
-    'strike': None,
-    'optionType': None,
-    'precision': {
-        'amount': 0.01,  # Tick size for SOL amount
-        'price': 0.01,   # Tick size for SOL price
-        'base': 8,
-        'quote': 8,
-    },
-    'limits': {
-        'leverage': {
-            'min': 1,
-            'max': 50,
-        },
-        'amount': {
-            'min': 0.1,  # Minimum 0.1 SOL (~$14)
-            'max': 1000000,
-        },
-        'price': {
-            'min': 0.01,
-            'max': 1000000,
-        },
-        'cost': {
-            'min': 10,  # Minimum $10 notional
-            'max': None,
-        },
-    },
-    'info': {}
-}
-
-# Apply market structure
-# set_markets expects a LIST of market dictionaries
-exchange.set_markets([market_info])
-
-# Mark as loaded to prevent auto-loading attempts
-exchange.has['fetchMarkets'] = False
 
 # ============================================================================
 # TRADING PARAMETERS
 # ============================================================================
 
 # Symbol Configuration
-symbol = 'SOL/USDT:USDT'  # ETH Futures
-base_symbol = 'ETHUSDT'  # Format untuk beberapa API calls
+symbol = 'ETH/USDT:USDT'  # Internal format
+base_symbol = 'ETHUSDT'   # API format
 
 # Leverage Settings
-# Leverage Settings
-LEVERAGE = 10  # Increased to 10x (User Request)
-MAX_LEVERAGE = 12  # Max limit
+LEVERAGE = 10  
+MAX_LEVERAGE = 50 
 
 # ============================================================================
 # ORDER SETTINGS
 # ============================================================================
 
-# Number of orders per side
-# Number of orders per side
-num_orders = 5  # Reduced to 5 (Lighter payload for 3s Speed)
+num_orders = 5 
+ORDER_BOOK_DEPTH = 20 
 
-# Order book depth
-ORDER_BOOK_DEPTH = 20  # Number of levels to fetch from order book
-
-# Order refresh settings
-# Order refresh settings
-ORDER_REFRESH_INTERVAL = 1   # Refresh every 1 second (HYPER SPEED)
-DATA_UPDATE_INTERVAL = 60  # Update historical data every 60 seconds
+ORDER_REFRESH_INTERVAL = 1   
+DATA_UPDATE_INTERVAL = 60  
 
 # ============================================================================
 # SPREAD & PRICING
 # ============================================================================
 
-# Spread settings (optimized for fees)
-# Spread settings (optimized for fees)
-# Spread settings (optimized for fees)
-# Fees: Maker 0.02% x 2 = 0.04% Roundtrip.
-MIN_SPREAD_PCT = 0.12   # 0.12% (Safe Mode: Profit > Volume)
-MAX_SPREAD_PCT = 0.20   # 0.20% maximum
-TARGET_SPREAD_MULTIPLIER = 1.0  # Use full spread width
+MIN_SPREAD_PCT = 0.12   
+MAX_SPREAD_PCT = 0.20   
+TARGET_SPREAD_MULTIPLIER = 1.0  
 
 # ============================================================================
 # POSITION & RISK MANAGEMENT
 # ============================================================================
 
-# Position limits
-# Position limits
-MAX_POSITION_SIZE_USD = 600  # Tripled for Volume (Utilization ~60%)
-POSITION_REBALANCE_THRESHOLD_USD = 300  # Rebalance at $300
-POSITION_CHECK_INTERVAL = 5  # Check position every 5 seconds
+MAX_POSITION_SIZE_USD = 600  
+POSITION_REBALANCE_THRESHOLD_USD = 300  
+POSITION_CHECK_INTERVAL = 5  
 
-# Order size limits
-# Order size limits
-MIN_ORDER_SIZE_USD = 15   # Must be >= 0.1 SOL (~$15)
-MAX_ORDER_SIZE_USD = 200  # Increased to allow $30-40 per order
-BASE_ORDER_SIZE_USD = 150  # Target Grid Size $150 (5 orders x $30)
+MIN_ORDER_SIZE_USD = 15   
+MAX_ORDER_SIZE_USD = 200  
+BASE_ORDER_SIZE_USD = 150  
 
-# Risk limits
-# Risk limits
-MAX_DAILY_LOSS_USD = -50   # Increased risk tolerance
-MAX_TOTAL_LOSS_USD = -80   # Emergency stop at $80 loss
-STOP_LOSS_PCT = 4.0        # 4% stop loss per position
-TAKE_PROFIT_PCT = 0.0015   # 0.15% Take Profit (Guaranteed Green)
+MAX_DAILY_LOSS_USD = -50   
+MAX_TOTAL_LOSS_USD = -80   
+STOP_LOSS_PCT = 4.0        
+TAKE_PROFIT_PCT = 0.0015   
 
 # ============================================================================
 # VOLUME TARGETS
 # ============================================================================
 
-TARGET_VOLUME_PER_HOUR = 40000   # Target $40k volume/hour
-TARGET_VOLUME_PER_DAY = 1000000   # Target $1M volume/day
+TARGET_VOLUME_PER_HOUR = 40000   
+TARGET_VOLUME_PER_DAY = 1000000   
 
 # ============================================================================
 # ML MODEL SETTINGS
 # ============================================================================
 
-# ML Model parameters
 USE_ML_MODEL = True
 ML_UPDATE_INTERVAL = 60
 ML_LOOKBACK_PERIOD = 60
@@ -198,35 +111,31 @@ ML_CONFIDENCE_THRESHOLD = 0.60
 # FEES & COSTS
 # ============================================================================
 
-# Bybit futures fees (User Account Specific)
-MAKER_FEE_PCT = 0.02  # 0.02% maker fee
-TAKER_FEE_PCT = 0.05  # 0.05% taker fee
-FUNDING_FEE_INTERVAL = 8 * 3600  # 8 hours in seconds
+MAKER_FEE_PCT = 0.02 
+TAKER_FEE_PCT = 0.05 
+FUNDING_FEE_INTERVAL = 8 * 3600 
 
 # ============================================================================
 # PRECISION SETTINGS
 # ============================================================================
 
-PRICE_PRECISION = 2  # ETH typically 2 decimals
-AMOUNT_PRECISION = 3  # ETH typically 3 decimals
+PRICE_PRECISION = 2  
+AMOUNT_PRECISION = 3  
 
 # ============================================================================
 # BALANCE & CAPITAL
 # ============================================================================
 
-# Initial balance tracking
-INITIAL_BALANCE_USD = 100  # $100 starting capital
+INITIAL_BALANCE_USD = 100  
 
 # ============================================================================
 # SAFETY & MONITORING
 # ============================================================================
 
-# Emergency stops
 ENABLE_EMERGENCY_STOP = True
 EMERGENCY_STOP_LOSS_PCT = 15.0
 
-# Monitoring intervals
-STATS_LOG_INTERVAL = 5     # 5s interval for Real-Time Dashboard Updates
+STATS_LOG_INTERVAL = 5     
 PERFORMANCE_CHECK_INTERVAL = 300
 
 # ============================================================================
@@ -234,136 +143,48 @@ PERFORMANCE_CHECK_INTERVAL = 300
 # ============================================================================
 
 EXCHANGE_CONFIG = {
-    'bybit': {
+    'bitunix': {
         'futures_format': True,
-        'symbol_format': 'ETH/USDT:USDT',
-        'min_order_usd': 10,
-        'max_leverage': 50,
-        'supports_hedge_mode': True,
+        'symbol_format': 'ETH/USDT:USDT', 
+        'min_order_usd': 5, # Bitunix might allow smaller? Keeping safe.
+        'max_leverage': 125,
+        'supports_hedge_mode': True, 
         'funding_interval_hours': 8,
     }
 }
 
 # Get current exchange config
-current_config = EXCHANGE_CONFIG.get(EXCHANGE_NAME, EXCHANGE_CONFIG['bybit'])
-
-# Safety Override REMOVED for Volume Mode
-# We intentionally use tight spreads (0.05%) for maximum fill rate
-# even if profit per trade is minimal (0.01%).
-pass
-
-# ============================================================================
-# DEMO MONEY APPLICATION
-# ============================================================================
-
-async def apply_demo_money(coin='USDT', amount='100000'):
-    """
-    Apply for demo trading money
-    
-    Endpoint: POST /v5/account/demo-apply-money
-    Max amounts per request:
-    - BTC: "15"
-    - ETH: "200"
-    - USDT: "100000"
-    - USDC: "100000"
-    
-    Args:
-        coin: Coin to add (BTC, ETH, USDT, USDC)
-        amount: Amount string
-        
-    Returns:
-        bool: Success status
-    """
-    try:
-        params = {
-            'adjustType': 0,  # Add demo funds
-            'utaDemoApplyMoney': [
-                {
-                    'coin': coin,
-                    'amountStr': amount
-                }
-            ]
-        }
-        result = await exchange.privatePostV5AccountDemoApplyMoney(params)
-        logger.info(f"✅ Demo money applied: {amount} {coin}")
-        return True
-    except Exception as e:
-        logger.error(f"Failed to apply demo money: {e}")
-        return False
-
-# ============================================================================
-# VALIDATION
-# ============================================================================
-
-def validate_config():
-    """Validate configuration parameters"""
-    issues = []
-    
-    # Check API keys
-    if not api_key or not api_secret or 'YOUR_' in api_key:
-        issues.append("⚠️ Demo API keys not set in .env file")
-        issues.append("   Get keys from: https://demo.bybit.com/app/user/api-management")
-    
-    # Check leverage
-    if LEVERAGE > current_config['max_leverage']:
-        issues.append(f"⚠️ Leverage {LEVERAGE}x exceeds max {current_config['max_leverage']}x")
-    
-    # Check order sizes
-    if MIN_ORDER_SIZE_USD < current_config['min_order_usd']:
-        issues.append(f"⚠️ Min order size ${MIN_ORDER_SIZE_USD} below minimum ${current_config['min_order_usd']}")
-    
-    # Check spread (Skipped for Volume Mode)
-    # Validation removed to allow tight spreads (0.05%)
-    pass
-    
-    # Demo-specific notes
-    issues.append("ℹ️ Using Bybit Demo Mainnet (https://api-demo.bybit.com)")
-    issues.append("ℹ️ Note: Leverage setting may be pre-configured in demo (error 10032 is normal)")
-    
-    return issues
+current_config = EXCHANGE_CONFIG.get(EXCHANGE_NAME, EXCHANGE_CONFIG['bitunix'])
 
 # ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
 
 def get_symbol_format():
-    """Get correct symbol format for current exchange"""
     return current_config['symbol_format']
 
 def calculate_position_size_from_usd(usd_value, price, leverage=LEVERAGE):
-    """Calculate position size in contracts from USD value"""
-    # Position size = (USD value / price) / leverage
-    # For futures: we want USD value worth of exposure
     return usd_value / price
 
 def calculate_margin_required(position_size_usd, leverage=LEVERAGE):
-    """Calculate margin required for a position"""
     return position_size_usd / leverage
 
 def calculate_liquidation_price(entry_price, leverage, side='long', maintenance_margin=0.005):
-    """
-    Calculate approximate liquidation price
-    
-    Args:
-        entry_price: Entry price
-        leverage: Leverage used
-        side: 'long' or 'short'
-        maintenance_margin: Maintenance margin ratio (0.5% default)
-    
-    Returns:
-        float: Liquidation price
-    """
     if side == 'long':
-        # Long liquidation: entry * (1 - 1/leverage + maintenance_margin)
         liq_price = entry_price * (1 - 1/leverage + maintenance_margin)
     else:
-        # Short liquidation: entry * (1 + 1/leverage - maintenance_margin)
         liq_price = entry_price * (1 + 1/leverage - maintenance_margin)
-    
     return liq_price
 
+def validate_config():
+    issues = []
+    
+    if EXCHANGE_NAME == 'bitunix':
+        if not bitunix_api_key or not bitunix_api_secret:
+             issues.append("⚠️ Bitunix API keys not set in .env (BITUNIX_API_KEY, BITUNIX_API_SECRET)")
+    
+    return issues
 
-# Run validation on import
 config_issues = validate_config()
 if config_issues:
     print("⚠️ Configuration Issues Found:")

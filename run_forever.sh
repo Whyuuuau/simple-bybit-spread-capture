@@ -9,7 +9,7 @@ NC='\033[0m'
 while true
 do
     echo -e "${GREEN}========================================${NC}"
-    echo -e "${GREEN}🚀 STARTING BYBIT BOT - $(date)${NC}"
+    echo -e "${GREEN}🚀 STARTING BITUNIX BOT - $(date)${NC}"
     echo -e "${GREEN}========================================${NC}"
     
     # Run the bot
