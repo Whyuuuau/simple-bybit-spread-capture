@@ -426,19 +426,30 @@ class BitunixExchange:
         side_map = {'buy': 'BUY', 'sell': 'SELL'}
         type_map = {'limit': 'LIMIT', 'market': 'MARKET'}
         
+        # Get Precision from options or default
+        p_prec = self.options.get('price_precision', 2)
+        a_prec = self.options.get('amount_precision', 2)
+        
+        # Strict formatting
+        qty_str = f"{float(amount):.{a_prec}f}"
+        
         body = {
             'symbol': clean_symbol,
             'side': side_map[side.lower()],
             'orderType': type_map[type.lower()],
-            'qty': str(amount),
-            'reduceOnly': True if params.get('reduceOnly') else False
+            'qty': qty_str
         }
         
+        # Optional params
+        if params.get('reduceOnly'):
+            body['reduceOnly'] = True
+            
         if type.lower() == 'limit':
             if not price:
                 raise Exception("Price required for limit order")
-            body['price'] = str(price)
-            body['effect'] = 'GTC' # Default GTC string
+            body['price'] = f"{float(price):.{p_prec}f}"
+            body['effect'] = 'GTC'
+        
         
             
         data = await self._request('POST', '/futures/trade/place_order', body=body, signed=True)
