@@ -1,98 +1,88 @@
-# 🚀 PANDUAN START 24/7 (VPS / DOCKER)
+# 🦅 PANDUAN LENGKAP BOT 24/7 (VPS / LINUX)
 
-Ini adalah langkah **dari 0 sampai selesai** untuk menjalankan bot di VPS/Docker supaya "Gacor" dan nonstop.
+Panduan ini berisi cara Menyalakan, Memantau, dan Mematikan bot di server VPS/Docker.
 
 ---
 
-## 1️⃣ Persiapan Otak (Wajib Sekali Saja)
+## 🛠️ 1. Persiapan Awal (Hanya Sekali)
 
-Sebelum bot jalan, kita harus melatih model ML dengan fitur terbaru kita.
+Sebelum memulai, kita harus memberikan "Surat Izin Mengemudi" ke script kita.
 
-**Copy & Paste command ini di terminal:**
+Copy-paste perintah ini ke terminal:
+
+```bash
+chmod +x run_forever.sh stop_bot.sh
+```
+
+---
+
+## 🧠 2. Update Otak Bot (Jika ada perubahan fitur)
+
+Jika Anda baru saja update coding atau ingin bot lebih pintar, jalankan training ulang.
 
 ```bash
 python train_xgboost.py
 ```
 
-_Tunggu sekitar 2-3 menit sampai muncul tulisan "Training Complete"._
+_Tunggu sampai muncul "Training Complete"._
 
 ---
 
-## 2️⃣ Persiapan Script (Sekali Saja)
+## 🚀 3. START BOT (Mode Hantu / Background)
 
-Kita perlu memberi izin agar script penjaga (`run_forever.sh`) boleh berjalan.
+Bot akan jalan terus meskipun Anda menutup laptop/browser.
 
-**Command:**
-
-```bash
-chmod +x run_forever.sh
-```
-
----
-
-## 3️⃣ Jalankan Bot (Pilih Salah Satu Mode)
-
-### 🅰️ Mode Biasa (Bot mati kalau browser ditutup)
-
-Gunakan ini untuk tes sebentar, melihat log di layar.
-
-```bash
-./run_forever.sh
-```
-
-_Tekan `Ctrl+C` untuk matikan._
-
-### 🅱️ Mode Background (Bot HIDUP TERUS walau browser ditutup) 🏆
-
-Gunakan ini untuk ditinggal tidur / 24 jam.
-
-**Command:**
+Jalankan perintah ini:
 
 ```bash
 nohup ./run_forever.sh > bot.log 2>&1 &
 ```
 
-_(Tidak akan muncul apa-apa di layar, karena bot jalan di belakang layar)_
+_(Tidak akan muncul apa-apa di layar. Ini Normal. Bot sudah jalan di belakang layar)_
 
 ---
 
-## 4️⃣ Cara Memantau Bot (Jika pakai Mode Background)
+## 📺 4. MONITORING (Mengintip Bot)
 
-Karena bot jalan di background, bagaimana cara lihatnya?
-
-**Cek Log (Real-time):**
+Untuk melihat apa yang sedang dilakukan bot (Profit/Loss, Volume):
 
 ```bash
 tail -f bot.log
 ```
 
-_Tekan `Ctrl+C` untuk keluar dari mode pantau log (bot TETAP jalan)._
+_Tahan tombol `Ctrl` lalu tekan `C` untuk keluar dari mode intip._
+_(Bot TETAP JALAN di background setelah Anda keluar)_
 
 ---
 
-## 5️⃣ Cara Mematikan Bot (Stop Total)
+## 🛑 5. STOP BOT (Untuk Maintenance / Edit)
 
-Jika ingin update atau stop.
-
-**Command:**
+Jika ingin mematikan bot sepenuhnya (misal mau ganti Config):
 
 ```bash
-pkill -f main.py
-pkill -f run_forever.sh
+./stop_bot.sh
 ```
 
+_Ini akan mematikan script penjaga dan bot utamanya._
+
 ---
 
-**🔥 Rangkuman Cepat (Copy-Paste Semua):**
+## ⚡ CHEAT SHEET (Rangkuman Commmand)
+
+**START (Nyalakan):**
 
 ```bash
-# 1. Train
-python train_xgboost.py
-
-# 2. Izin & Jalan Background
-chmod +x run_forever.sh
 nohup ./run_forever.sh > bot.log 2>&1 &
+```
 
-# 3. Cek Log
+**MONITOR (Lihat Log):**
+
+```bash
 tail -f bot.log
+```
+
+**STOP (Matikan):**
+
+```bash
+./stop_bot.sh
 ```
