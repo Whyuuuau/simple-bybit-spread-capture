@@ -131,20 +131,18 @@ def get_liquidity_at_level(order_book, price, side, tolerance_pct=0.01):
     return total_liquidity_usd
 
 
-def find_optimal_price_levels(order_book, num_orders, spread_pct, symbol_precision=None):
+def find_optimal_price_levels(order_book, num_orders, spread_pct, symbol_precision=None, skew=0):
     """
-    Find optimal price levels for order placement
-    
-    Strategy:
-    - Place orders distributed across the spread
-    - Position them to maximize fill probability
-    - Respect exchange price precision
+    Find optimal price levels for limit orders with skew support
     
     Args:
         order_book: Order book dict
         num_orders: Number of orders per side
-        spread_pct: Target spread percentage
-        symbol_precision: Price precision for the symbol
+        spread_pct: Base spread percentage
+        symbol_precision: Price precision for rounding
+        skew: Market skew (-1 to 1). 
+              - Positive (Bullish): Tighter Buys (Chase), Wider Sells (Hold)
+              - Negative (Bearish): Wider Buys (Safety), Tighter Sells (Dump)
     
     Returns:
         tuple: (buy_prices, sell_prices)
@@ -158,6 +156,16 @@ def find_optimal_price_levels(order_book, num_orders, spread_pct, symbol_precisi
     # Convert spread percentage to decimal
     spread_decimal = spread_pct / 100
     
+    # Calculate Skew Multipliers
+    # Skew > 0 (Bullish): Buy Closer (0.5x spread), Sell Further (1.5x spread)
+    # Skew < 0 (Bearish): Buy Lower (1.5x spread), Sell Closer (0.5x spread)
+    buy_spread_mult = 1.0 - skew
+    sell_spread_mult = 1.0 + skew
+    
+    # Safety Clamps (Don't let spread collapse to 0 or explode)
+    buy_spread_mult = max(0.2, min(buy_spread_mult, 3.0))
+    sell_spread_mult = max(0.2, min(sell_spread_mult, 3.0))
+    
     buy_prices = []
     sell_prices = []
     
@@ -166,8 +174,9 @@ def find_optimal_price_levels(order_book, num_orders, spread_pct, symbol_precisi
         # First order closest to mid, last order furthest
         step = (i + 0.5) / num_orders
         
-        buy_price = mid_price * (1 - spread_decimal * step)
-        sell_price = mid_price * (1 + spread_decimal * step)
+        # Apply skewed spread
+        buy_price = mid_price * (1 - (spread_decimal * buy_spread_mult) * step)
+        sell_price = mid_price * (1 + (spread_decimal * sell_spread_mult) * step)
         
         # Round to exchange precision if provided
         if symbol_precision:
@@ -177,8 +186,7 @@ def find_optimal_price_levels(order_book, num_orders, spread_pct, symbol_precisi
         buy_prices.append(buy_price)
         sell_prices.append(sell_price)
     
-    logger.debug(f"Order levels | Buy: {buy_prices[0]:.6f}-{buy_prices[-1]:.6f} | "
-                f"Sell: {sell_prices[0]:.6f}-{sell_prices[-1]:.6f}")
+    logger.debug(f"Order levels (Skew {skew:.2f}) | Buy: {buy_prices[0]:.6f} | Sell: {sell_prices[0]:.6f}")
     
     return buy_prices, sell_prices
 

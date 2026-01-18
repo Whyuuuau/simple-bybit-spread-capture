@@ -420,12 +420,23 @@ class HybridVolumeBot:
             # Get order book for optimal price levels
             order_book = await fetch_order_book(self.exchange, self.symbol, ORDER_BOOK_DEPTH)
             
-            # Find optimal price levels
+            # Calculate Trend Skew (Critical for avoiding Floating Loss)
+            # Bullish -> Skew > 0 -> Buy Closer, Sell Higher
+            # Bearish -> Skew < 0 -> Buy Lower (Safety), Sell Closer (Dump)
+            skew = 0
+            if self.use_ml:
+                if self.current_signal == 'BULLISH':
+                    skew = 0.6 * self.signal_confidence # Strong Bull skew
+                elif self.current_signal == 'BEARISH':
+                    skew = -0.6 * self.signal_confidence # Strong Bear protection
+            
+            # Find optimal price levels with SKEW
             buy_prices, sell_prices = find_optimal_price_levels(
                 order_book,
                 num_orders,
                 spread_pct,
-                PRICE_PRECISION
+                PRICE_PRECISION,
+                skew=skew
             )
             
             # Calculate order sizes (returns SOL amounts directly)
