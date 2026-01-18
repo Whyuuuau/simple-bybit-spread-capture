@@ -111,7 +111,13 @@ def add_volume_indicators(df):
     df['volume_ma_20'] = df['volume'].rolling(20).mean()
     df['volume_ratio'] = df['volume'] / (df['volume_ma_20'] + 1e-10) # Matches name
     df['volume_roc'] = df['volume'].pct_change(10)
-    df['vwap'] = (df['close'] * df['volume']).cumsum() / df['volume'].cumsum()
+    
+    # VWAP Safe Calculation
+    vol_cumsum = df['volume'].cumsum()
+    df['vwap'] = (df['close'] * df['volume']).cumsum() / (vol_cumsum + 1e-10)
+    
+    # If volume is all zero, vwap will be 0 (or large if 1e-10 is small divisor of 0?) 
+    # Actually if vol is 0, numerator is 0, denominator is 1e-10. Result 0. Correct.
     return df
 
 def add_volatility_indicators(df):
