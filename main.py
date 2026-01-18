@@ -21,6 +21,7 @@ import signal
 import sys
 from datetime import datetime, timedelta
 from typing import Optional
+import json  # ✅ Added for Dashboard
 
 # Core modules
 from config import *
@@ -600,6 +601,22 @@ class HybridVolumeBot:
                           f"Be:{self.stats['ml_signals']['BEARISH']}")
             
             logger.info("=" * 80)
+            
+            # ✅ DUMP DASHBOARD DATA FOR MONITOR.PY
+            try:
+                dash_data = {
+                    "runtime": f"{runtime:.2f}h",
+                    "volume": f"${self.stats['total_volume']:,.2f}",
+                    "pnl": f"${self.stats['net_pnl']:.2f}",
+                    "trades": self.stats['total_trades'],
+                    "position": f"${position['position_value_usd']:.0f} {position['side'].upper()}" if position else "FLAT",
+                    "ml_signal": f"{self.current_signal} ({self.signal_confidence:.0%})",
+                    "last_update": datetime.now().strftime("%H:%M:%S")
+                }
+                with open("dashboard.json", "w") as f:
+                    json.dump(dash_data, f)
+            except:
+                pass
             
         except Exception as e:
             logger.error(f"Error logging statistics: {e}")

@@ -148,7 +148,7 @@ DATA_UPDATE_INTERVAL = 60  # Update historical data every 60 seconds
 # Spread settings (optimized for fees)
 # Spread settings (optimized for fees)
 # Fees: Maker 0.02% x 2 = 0.04% Roundtrip.
-MIN_SPREAD_PCT = 0.08   # 0.08% (Break-Even Churn: 0.07% Fees + 0.01% Buffer)
+MIN_SPREAD_PCT = 0.12   # 0.12% (Safe Mode: Profit > Volume)
 MAX_SPREAD_PCT = 0.20   # 0.20% maximum
 TARGET_SPREAD_MULTIPLIER = 1.0  # Use full spread width
 
@@ -173,7 +173,7 @@ BASE_ORDER_SIZE_USD = 150  # Target Grid Size $150 (5 orders x $30)
 MAX_DAILY_LOSS_USD = -50   # Increased risk tolerance
 MAX_TOTAL_LOSS_USD = -80   # Emergency stop at $80 loss
 STOP_LOSS_PCT = 4.0        # 4% stop loss per position
-TAKE_PROFIT_PCT = 0.0008   # 0.08% Take Profit (Break-Even Turnover)
+TAKE_PROFIT_PCT = 0.0015   # 0.15% Take Profit (Guaranteed Green)
 
 # ============================================================================
 # VOLUME TARGETS
@@ -226,7 +226,7 @@ ENABLE_EMERGENCY_STOP = True
 EMERGENCY_STOP_LOSS_PCT = 15.0
 
 # Monitoring intervals
-STATS_LOG_INTERVAL = 60
+STATS_LOG_INTERVAL = 5     # 5s interval for Real-Time Dashboard Updates
 PERFORMANCE_CHECK_INTERVAL = 300
 
 # ============================================================================
