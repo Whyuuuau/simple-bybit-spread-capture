@@ -301,8 +301,9 @@ class FuturesPositionManager:
             # Short sleep to ensure cancellation propagates
             await asyncio.sleep(0.5)
             
-            # Calculate amount to close (90% to avoid over-closing)
-            raw_amount = abs(position_size) * 0.9
+            # Calculate amount to close (Soft Rebalance: 25% to nibble down position)
+            # Was 90% -> Too aggressive for losing positions
+            raw_amount = abs(position_size) * 0.25 
             approx_price = position_value / abs(position_size) if abs(position_size) > 0 else 0
             
             # Ensure valid precision and min size

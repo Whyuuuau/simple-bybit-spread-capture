@@ -427,12 +427,33 @@ class HybridVolumeBot:
             # Bullish -> Skew > 0 -> Buy Closer, Sell Higher
             # Bearish -> Skew < 0 -> Buy Lower (Safety), Sell Closer (Dump)
             # REDUCED SKEW to 0.2 (from 0.6) to prevent "Catching Knives"
+            # Calculate Trend Skew
             skew = 0
+            
+            # 1. ML Signal Skew
             if self.use_ml:
                 if self.current_signal == 'BULLISH':
-                    skew = 0.2 * self.signal_confidence # Gentle Bull bias
+                    skew += 0.2 * self.signal_confidence
                 elif self.current_signal == 'BEARISH':
-                    skew = -0.2 * self.signal_confidence # Gentle Bear bias
+                    skew -= 0.2 * self.signal_confidence
+            
+            # 2. Inventory Skew (Automatic Bag Clearing)
+            # If Long     -> Negative Skew (Sell Closer)
+            # If Short    -> Positive Skew (Buy Closer)
+            if MAX_POSITION_SIZE_USD > 0:
+                 inv_ratio = position_value / MAX_POSITION_SIZE_USD
+                 # Cap ratio at 1.0
+                 inv_ratio = max(min(inv_ratio, 1.0), -1.0)
+                 
+                 # Apply inverse skew (Stronger than ML if position is large)
+                 # Factor 0.5 means at max position, we shift levels by 50% spread towards exit
+                 inventory_skew = -0.5 * inv_ratio
+                 skew += inventory_skew
+                 
+                 logger.info(f"⚖️ SKEW: Total={skew:.2f} (ML={self.current_signal[:3]} | InvSk={inventory_skew:.2f})")
+            
+            # Clamp Skew
+            skew = max(min(skew, 0.8), -0.8)
             
             # Find optimal price levels with SKEW
             buy_prices, sell_prices = find_optimal_price_levels(
@@ -470,7 +491,7 @@ class HybridVolumeBot:
                 self.exchange,
                 self.symbol,
                 target_orders,
-                price_tolerance_pct=0.02  # High sensitivity (0.02%) for sticky orders
+                price_tolerance_pct=0.01  # Hyper sensitivity (0.01%) to prevent stuck orders during trends
             )
             
             self.stats['orders_placed'] += stats['placed']

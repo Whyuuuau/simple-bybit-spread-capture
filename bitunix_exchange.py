@@ -615,12 +615,12 @@ class BitunixExchange:
             positions.append({
                 'symbol': final_symbol,
                 'contracts': signed_contracts,
-                'notional': float(p.get('value', 0) or p.get('entryValue', 0)), 
-                'unrealizedPnl': float(p.get('unrealizedPNL', 0)), # Correct exact key from docs
-                'entryPrice': float(p.get('entryPrice', 0)),
-                'liquidationPrice': float(p.get('liqPrice', 0)),
-                'leverage': float(p.get('leverage', 0)),
-                'initialMargin': float(p.get('margin', 0)),
+                'notional': float(p.get('value') or p.get('entryValue') or 0), 
+                'unrealizedPnl': float(p.get('unrealizedPNL') or 0), # Correct exact key from docs
+                'entryPrice': float(p.get('entryPrice') or 0),
+                'liquidationPrice': float(p.get('liqPrice') or 0),
+                'leverage': float(p.get('leverage') or 0),
+                'initialMargin': float(p.get('margin') or 0),
                 'side': side_key
             })
         
@@ -657,5 +657,53 @@ class BitunixExchange:
         return "{:.{p}f}".format(float(amount), p=self.amount_precision)
         
     async def fetch_my_trades(self, symbol, limit=50):
-        return []
+        """
+        Fetch Data for PnL Calculation
+        Endpoint: /api/v1/futures/trade/get_history_orders (Completed orders)
+        OR /api/v1/futures/trade/get_history_trades (Fills) -> Better for PnL
+        """
+        clean_symbol = symbol.replace('/', '').replace(':', '').split('USDT')[0] + 'USDT'
+        
+        # Using get_history_orders because get_history_trades might require different perms
+        # But get_history_orders has 'cumQty' and 'avgPrice' which is enough for PnL.
+        # Actually, get_history_trades is more distinct for individual fills.
+        # Let's try get_history_orders (status=2 for filled/partial)
+        
+        # Params: symbol, state (optional, 2=COMPLETED, 3=CANCELLED)
+        # We want Filled orders for PnL.
+        try:
+             # state=2 is usually FILLED or HISTORY
+             data = await self._request('GET', '/futures/trade/get_history_orders', params={'symbol': clean_symbol, 'limit': limit}, signed=True)
+        except Exception as e:
+             print(f"Fetch trades error: {e}")
+             return []
+
+        trades = []
+        if isinstance(data, list):
+            for o in data:
+                # Only care if filled > 0
+                filled = float(o.get('cumQty', 0))
+                if filled <= 0:
+                     continue
+                
+                # Map side/type
+                s_map = {1: 'buy', 2: 'sell'}
+                side = s_map.get(o.get('side'), 'buy')
+                
+                avg_price = float(o.get('avgPrice', 0) or o.get('price', 0))
+                fee = float(o.get('fee', 0))
+                
+                trades.append({
+                    'id': str(o.get('orderId')),
+                    'order': str(o.get('orderId')),
+                    'symbol': symbol,
+                    'side': side,
+                    'price': avg_price,
+                    'amount': filled,
+                    'cost': avg_price * filled,
+                    'fee': {'cost': fee, 'currency': 'USDT'},
+                    'timestamp': o.get('createTime') or o.get('ctime') or int(time.time()*1000)
+                })
+                
+        return trades
 
