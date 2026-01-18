@@ -87,12 +87,14 @@ class BitunixExchange:
         
         # Handle Body
         json_body = None
+        body_str_for_sign = ""
+        
         if body:
              # Drop None values
             body = {k: v for k, v in body.items() if v is not None}
-            json_body = body
             # Compact JSON for signature (no spaces)
-            body_str_for_sign = json.dumps(body, separators=(',', ':'))
+            # IMPORTANT: Use sort_keys=True to ensure deterministic order for signature AND request
+            body_str_for_sign = json.dumps(body, separators=(',', ':'), sort_keys=True)
         
         if signed:
             nonce = str(uuid.uuid4()).replace('-', '')
@@ -108,7 +110,8 @@ class BitunixExchange:
             })
             
         try:
-            async with self.session.request(method, url, headers=headers, json=json_body) as response:
+            # Use 'data' with pre-serialized string to ensure signature match
+            async with self.session.request(method, url, headers=headers, params=params, data=body_str_for_sign if body else None) as response:
                 text = await response.text()
                 try:
                     data = json.loads(text)
@@ -148,17 +151,21 @@ class BitunixExchange:
              ticker_data = data # Or sometimes it returns object if param specified?
              
         if not ticker_data:
-             # Fallback logic if needed, or re-fetch all
-             pass
-
-        if not ticker_data:
              raise Exception(f"Ticker not found for {clean_symbol}")
 
+        last = float(ticker_data.get('price', 0))
+        bid = float(ticker_data.get('buyOne', 0))
+        ask = float(ticker_data.get('sellOne', 0))
+        
+        # Fallback if bid/ask are 0
+        if bid == 0: bid = last
+        if ask == 0: ask = last
+        
         return {
             'symbol': symbol,
-            'bid': float(ticker_data.get('buyOne', 0)), # Best Bid
-            'ask': float(ticker_data.get('sellOne', 0)), # Best Ask
-            'last': float(ticker_data.get('price', 0)),
+            'bid': bid, # Best Bid
+            'ask': ask, # Best Ask
+            'last': last,
             'timestamp': int(time.time() * 1000)
         }
 

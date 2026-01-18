@@ -353,6 +353,14 @@ class HybridVolumeBot:
             ticker = await self.exchange.fetch_ticker(self.symbol)
             current_price = (ticker['bid'] + ticker['ask']) / 2
             
+            # Safety checks for zero price
+            if current_price <= 0:
+                current_price = ticker.get('last', 0)
+            if current_price <= 0:
+                logger.error("❌ CRITICAL: Current price = 0. Cannot calc sizes. using 0.01 safety.")
+                current_price = 0.01
+
+            
             # DEBUG LOG
             logger.info(f"🔎 CALC_SIZES: BaseUSD={BASE_ORDER_SIZE_USD} | Price={current_price} | Num={num_orders}")
 

@@ -48,11 +48,25 @@ async def get_market_price(exchange, symbol):
         symbol: Trading symbol
     
     Returns:
-        tuple: (bid, ask) or (0, 0) on error
+        tuple: (bid, ask)
     """
     try:
         ticker = await exchange.fetch_ticker(symbol)
-        return ticker['bid'], ticker['ask']
+        bid = ticker['bid']
+        ask = ticker['ask']
+
+        # Fallback logic for zero prices
+        if bid <= 0 or ask <= 0:
+            last_price = ticker.get('last')
+            if last_price is not None and last_price > 0:
+                logger.warning(f"Bid/Ask price is zero or negative for {symbol}. Using 'last' price as fallback: {last_price}")
+                bid = last_price
+                ask = last_price
+            else:
+                logger.error(f"❌ CRITICAL: Bid/Ask and 'last' price are zero or negative for {symbol}. Cannot determine market price.")
+                return 0, 0
+        
+        return bid, ask
     except Exception as e:
         logger.error(f"Error fetching market price: {e}")
         return 0, 0
