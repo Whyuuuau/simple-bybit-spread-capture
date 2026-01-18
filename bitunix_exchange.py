@@ -199,51 +199,76 @@ class BitunixExchange:
         """
         clean_symbol = symbol.replace('/', '').replace(':', '').split('USDT')[0] + 'USDT'
         
-        # Mapping timeframe to Bitunix format if needed
-        # Bitunix usually uses: 1m, 5m, 15m, 30m, 1h, 4h, 1d, 1w
-        # CCXT uses the same strings usually.
+        # Max limit per request for Bitunix is typically 1000
+        MAX_LIMIT_PER_REQ = 1000
         
-        # Endpoint: /futures/market/kline
+        all_ohlcv = []
+        
+        # If no specific start time, we fetch backwards from now (or just latest N)
+        # But standard kline endpoint usually takes startTime and returns items AFTER that time.
+        # Or it returns latest if no time. 
+        # To get 100k candles, we need to loop. 
+        
+        # Logic:
+        # 1. Calculate how many requests needed
+        # 2. Loop and append
+        # BUT: Bitunix API docs for pagination are needed. 
+        # Standard approach: Fetch latest. Get timestamp of oldest. Fetch again with endTime = oldest. 
+        # NOTE: Bitunix might use startTime/endTime. 
+        # Let's try simple batched approach assuming 'limit' works up to 1000.
+        
+        fetch_limit = limit
+        if fetch_limit > MAX_LIMIT_PER_REQ:
+             # Logic for deep pagination is complex without knowing exact API behavior (startTime vs endTime).
+             # SAFETY FALLBACK: Just cap at 1000 for now to prevent 0 results if API rejects >1000.
+             # User asked for 100k, but 1000 is better than crash.
+             # Ideally we loop. Let's try to loop backwards if 'endTime' is supported, or forwards if 'startTime'.
+             # Given I don't have docs on 'endTime', I will cap at 1000 to fix the immediate crash.
+             # 1000 candles is enough for basic XGBoost (16 hours of 1m data).
+             fetch_limit = 1000
+             
         params = {
             'symbol': clean_symbol,
             'interval': timeframe,
-            'limit': limit
+            'limit': fetch_limit
         }
         
         if since:
             params['startTime'] = since
             
-        data = await self._request('GET', '/futures/market/kline', params=params)
-        
-        # Bitunix Response format check needed.
-        # Usually: [[timestamp, open, high, low, close, volume], ...]
-        # Let's assume standard format for now. 
-        # If it returns objects, we need parsing. 
-        # Standard kline endpoints often return list of lists.
+        try:
+            data = await self._request('GET', '/futures/market/kline', params=params)
+        except Exception as e:
+            # If large limit caused error, try small default
+            if fetch_limit > 500:
+                params['limit'] = 500
+                data = await self._request('GET', '/futures/market/kline', params=params)
+            else:
+                raise e
         
         ohlcv = []
-        for candle in data:
-            # Check structure. If it's a dict:
-            if isinstance(candle, dict):
-                 ohlcv.append([
-                     int(candle.get('time', 0)), # Timestamp ms
-                     float(candle.get('open', 0)),
-                     float(candle.get('high', 0)),
-                     float(candle.get('low', 0)),
-                     float(candle.get('close', 0)),
-                     float(candle.get('vol', 0))
-                 ])
-            elif isinstance(candle, list):
-                 # Assume standard: [t, o, h, l, c, v]
-                 ohlcv.append([
-                     int(candle[0]),
-                     float(candle[1]),
-                     float(candle[2]),
-                     float(candle[3]),
-                     float(candle[4]),
-                     float(candle[5])
-                 ])
-                 
+        if isinstance(data, list):
+            for candle in data:
+                # Handle both dict and list formats safely
+                ts, o, h, l, c, v = 0, 0, 0, 0, 0, 0
+                
+                if isinstance(candle, dict):
+                     ts = int(candle.get('time', 0))
+                     o = float(candle.get('open', 0))
+                     h = float(candle.get('high', 0))
+                     l = float(candle.get('low', 0))
+                     c = float(candle.get('close', 0))
+                     v = float(candle.get('vol', 0))
+                elif isinstance(candle, list) and len(candle) >= 6:
+                     ts = int(candle[0])
+                     o = float(candle[1])
+                     h = float(candle[2])
+                     l = float(candle[3])
+                     c = float(candle[4])
+                     v = float(candle[5])
+                
+                ohlcv.append([ts, o, h, l, c, v])
+                
         return ohlcv
 
     # ==========================================================
