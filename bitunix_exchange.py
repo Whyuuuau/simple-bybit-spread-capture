@@ -146,40 +146,76 @@ class BitunixExchange:
     async def fetch_ticker(self, symbol):
         """
         Get ticker. Note: Bitunix symbols usually formatted like 'ETHUSDT'
+        We need to handle the internal 'ETH/USDT:USDT' format.
         """
         clean_symbol = symbol.replace('/', '').replace(':', '').split('USDT')[0] + 'USDT'
         
-        # Endpoint: /futures/market/tickers
-        data = await self._request('GET', '/futures/market/tickers', params={'symbol': clean_symbol})
-        
-        # Usually returns a list, find match
-        ticker_data = None
-        if isinstance(data, list):
-            for t in data:
-                if t['symbol'] == clean_symbol:
-                    ticker_data = t
-                    break
-        else:
-             ticker_data = data # Or sometimes it returns object if param specified?
-             
-        if not ticker_data:
-             raise Exception(f"Ticker not found for {clean_symbol}")
+        try:
+            # 1. Try 'tickers' endpoint (plural) which is known to work for Last Price
+            # Singular 'ticker' endpoint is broken.
+            tickers_data = await self._request('GET', '/futures/market/tickers', params={'symbol': clean_symbol})
+            
+            # Response is a list of tickers. Find ours.
+            ticker_data = None
+            if isinstance(tickers_data, list):
+                for t in tickers_data:
+                    if t.get('symbol') == clean_symbol:
+                        ticker_data = t
+                        break
+            
+            if not ticker_data:
+                 # Fallback: Maybe it's a dict?
+                 if isinstance(tickers_data, dict) and tickers_data.get('symbol') == clean_symbol:
+                     ticker_data = tickers_data
+            
+            if not ticker_data:
+                raise Exception(f"Symbol {clean_symbol} not found in tickers response")
 
-        last = float(ticker_data.get('price', 0))
-        bid = float(ticker_data.get('buyOne', 0))
-        ask = float(ticker_data.get('sellOne', 0))
-        
-        # Fallback if bid/ask are 0
-        if bid == 0: bid = last
-        if ask == 0: ask = last
-        
-        return {
-            'symbol': symbol,
-            'bid': bid, # Best Bid
-            'ask': ask, # Best Ask
-            'last': last,
-            'timestamp': int(time.time() * 1000)
-        }
+            # Parse Last Price
+            last = float(ticker_data.get('lastPrice', ticker_data.get('last', 0)))
+            
+            # 2. Bid/Ask are often MISSING in the summary ticker. 
+            # We must try to get them from 'depth' or just falback to 'last' to allow bot to run.
+            bid = float(ticker_data.get('buyOne', 0))
+            ask = float(ticker_data.get('sellOne', 0))
+            
+            # If 0, try to fetch depth briefly? Or just use last.
+            # Fetching depth every ticker call is expensive. Let's rely on 'last' for approximation
+            # OR - use the known working depth endpoint if bid/ask are strictly needed.
+            
+            if bid == 0 or ask == 0:
+                 # Fast depth check for better precision
+                 try:
+                     depth = await self._request('GET', '/futures/market/depth', params={'symbol': clean_symbol, 'limit': 5})
+                     bids = depth.get('bids', [])
+                     asks = depth.get('asks', [])
+                     if bids: bid = float(bids[0][0])
+                     if asks: ask = float(asks[0][0])
+                 except:
+                     pass # Fallback to last
+            
+            # Final Fallback
+            if bid == 0: bid = last
+            if ask == 0: ask = last
+            
+            return {
+                'symbol': symbol,
+                'bid': bid, # Best Bid
+                'ask': ask, # Best Ask
+                'last': last,
+                'timestamp': int(time.time() * 1000)
+            }
+            
+        except Exception as e:
+            print(f"Error fetching ticker: {e}")
+            # Emergency fallback to avoid bot crash
+            return {
+                'symbol': symbol,
+                'bid': 0,
+                'ask': 0,
+                'last': 0,
+                'timestamp': int(time.time() * 1000)
+            }
 
     async def fetch_order_book(self, symbol, limit=20):
         """Fetch Order Book"""
