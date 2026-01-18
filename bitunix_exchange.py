@@ -572,11 +572,15 @@ class BitunixExchange:
         try:
              # Params usually symbol needed
              data = await self._request('GET', '/futures/trade/get_pending_orders', params={'symbol': clean_symbol}, signed=True)
-        except Exception:
+        except Exception as e:
+             logger.error(f"fetch_open_orders error: {e}")
              return []
+        
+        logger.debug(f"🔍 Raw API response type: {type(data)}, is_list: {isinstance(data, list)}")
         
         orders = []
         if isinstance(data, list):
+            logger.debug(f"🔍 Processing {len(data)} orders from API")
             for o in data:
                 # Mapping side/type back
                 s_map = {1: 'buy', 2: 'sell'}
@@ -593,6 +597,8 @@ class BitunixExchange:
                     'filled': float(o.get('cumQty', 0)),
                     'timestamp': o.get('createTime') or o.get('ctime')
                 })
+        
+        logger.info(f"✅ fetch_open_orders returning {len(orders)} orders")
         return orders
         
     async def fetch_positions(self, symbols=None):

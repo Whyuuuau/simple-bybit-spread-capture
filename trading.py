@@ -1,35 +1,38 @@
 """Trading module with proper order management, PnL calculation, and profit-taking"""
 import asyncio
 from datetime import datetime, timedelta
-from logger_config import setup_logger, log_trade
+from config import *
+from logger_config import setup_logger, log_trade, log_pnl
+
+# Bitunix SOL Futures Minimum Order Size (will be fetched dynamically)
+MIN_ORDER_SIZE_SOL = 0.1  # Default minimum, will be updated from API
 
 logger = setup_logger('Trading')
 
 
-def calc_sol_size(amount_crypto, current_price):
+def calc_sol_size(amount_crypto, current_price, min_size=MIN_ORDER_SIZE_SOL):
     """
-    Calculate SOL size meeting min requirements (0.1 SOL)
+    Calculate SOL size meeting min requirements
     
     Args:
         amount_crypto: Raw crypto amount
         current_price: Current price
+        min_size: Minimum order size (default 0.1 SOL)
         
     Returns:
-        float: Rounded amount (>= 0.1)
+        float: Rounded amount (>= min_size)
     """
-    # Precision based on TICK_SIZE logic
     # Precision based on config
     # Bitunix usually 0.1 or 0.01 for main coins
-    # We use Strict Mode default of 0.1 if not defined 
     precision = 1
     
     rounded_amount = round(amount_crypto, precision)
     
-    # Ensure minimum amount (0.1 for SOL, safe default)
-    if rounded_amount < 0.1:
-        rounded_amount = 0.1
+    # Ensure minimum amount
+    if rounded_amount < min_size:
+        rounded_amount = min_size
     
-    # Check notional value (Relaxed for grid trading, let exchange reject if <$5)
+    # Check notional value
     notional_value = rounded_amount * current_price
     
     return rounded_amount
@@ -192,10 +195,13 @@ async def cancel_all_orders(exchange, symbol):
         int: Number of orders cancelled
     """
     try:
+        logger.info(f"🔍 cancel_all_orders called for {symbol}")
         open_orders = await get_open_orders(exchange, symbol)
         
+        logger.info(f"🔍 Fetched {len(open_orders) if open_orders else 0} open orders")
+        
         if not open_orders:
-            logger.debug("No open orders to cancel")
+            logger.info("ℹ️ No open orders to cancel")
             return 0
         
         logger.info(f"Cancelling {len(open_orders)} open orders...")

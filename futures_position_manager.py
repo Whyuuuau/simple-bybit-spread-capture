@@ -322,7 +322,14 @@ class FuturesPositionManager:
             # Ensure valid precision and min size
             amount_to_close = calc_sol_size(raw_amount, approx_price)
             
+            # CRITICAL: Check if amount meets minimum order size
+            # Bitunix SOL minimum is typically 0.1
+            if amount_to_close < 0.1:
+                logger.warning(f"⚠️ Rebalance amount {amount_to_close} < 0.1 SOL minimum. Skipping.")
+                return False
+            
             if amount_to_close <= 0:
+                logger.warning("⚠️ Calculated close amount is zero. Skipping rebalance.")
                 return False
             
             # CRITICAL: Get positionId for hedge mode closing
