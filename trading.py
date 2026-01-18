@@ -323,8 +323,12 @@ async def smart_order_management(exchange, symbol, target_orders, price_toleranc
     if len(open_orders) > len(target_orders) * 2:
         logger.warning(f"🧹 CROWD CONTROL: Found {len(open_orders)} orders (Target {len(target_orders)}). Force clearing...")
         await cancel_all_orders(exchange, symbol)
-        # Re-fetch or assume empty (safer to assume empty and place fresh)
-        open_orders = [] 
+        
+        # CRITICAL FIX: Return immediately!
+        # Do not attempt to place new orders until the cleanup is confirmed.
+        # This prevents the "Infinite Stacking" loop where we add 10 more orders on top of the 60 we failed to cancel.
+        logger.warning("🚫 Stacking detected. Halting order placement for 1 cycle to allow cleanup.")
+        return {'cancelled': len(open_orders), 'placed': 0, 'kept': 0}
         
     stats = {'cancelled': 0, 'placed': 0, 'kept': 0}
     

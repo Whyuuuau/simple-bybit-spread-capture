@@ -479,7 +479,7 @@ class BitunixExchange:
         
         # Optional params
         if params.get('reduceOnly'):
-            body['reduceOnly'] = True
+            # body['reduceOnly'] = True  <-- CAUSES ERROR 10002! Bitunix uses tradeSide only.
             body['tradeSide'] = 'CLOSE' # If reduceOnly, it's a close
             
         if type.lower() == 'limit':
@@ -515,6 +515,32 @@ class BitunixExchange:
 
     async def create_market_sell_order(self, symbol, amount, params={}):
         return await self.create_order(symbol, 'market', 'sell', amount, params=params)
+
+    async def cancel_orders(self, ids, symbol):
+        """Batch Cancel Orders"""
+        clean_symbol = symbol.replace('/', '').replace(':', '').split('USDT')[0] + 'USDT'
+        
+        # Endpoint: /futures/trade/cancel_orders
+        # Body: {"symbol": "SOLUSDT", "orderList": [id1, id2, ...]}
+        
+        # Bitunix might require list of dicts or just list of IDs?
+        # Docs usually imply list of objects or IDs. 
+        # API Doc Reference: "orderList": [{"orderId": 1}, {"orderId": 2}] OR [1, 2]
+        # Let's try list of objects first as it's common for complex APIs, 
+        # BUT search result said "orderList containing orderId".
+        # Let's try simple list of IDs first, if fails try list of dicts.
+        # Actually safe bet is generating both if generic.
+        # Standard Bitunix pattern for batch usually expects list of dicts:
+        # [{"orderId": "..."}]
+        
+        order_list = [{'orderId': str(x)} for x in ids]
+        
+        body = {
+            'symbol': clean_symbol,
+            'orderList': order_list
+        }
+        
+        return await self._request('POST', '/futures/trade/cancel_orders', body=body, signed=True)
 
     async def cancel_order(self, id, symbol):
         """Cancel Order by ID"""
