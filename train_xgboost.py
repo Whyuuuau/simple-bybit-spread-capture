@@ -71,10 +71,16 @@ async def main():
         )
         
         if historical_data.empty:
-            logger.error("❌ Failed to fetch historical data!")
+            logger.error("❌ Failed to fetch historical data! DataFrame is empty.")
             return False
-        
+            
         logger.info(f"✅ Fetched {len(historical_data)} candles")
+        print(historical_data.head())
+        print(historical_data.tail())
+        
+        if len(historical_data) < 200:
+             logger.error(f"❌ Not enough data! Got {len(historical_data)} candles, need at least 200 for indicators.")
+             return False
         
         # Add features
         logger.info("Adding technical indicators...")

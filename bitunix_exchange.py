@@ -189,86 +189,160 @@ class BitunixExchange:
 
     async def fetch_ohlcv(self, symbol, timeframe='1m', since=None, limit=100):
         """
-        Fetch OHLCV Data
-        
-        Args:
-            symbol (str): Trading symbol
-            timeframe (str): Timeframe (e.g., '1m', '1h')
-            since (int): Start timestamp (ms) - optional
-            limit (int): Number of candles
+        Fetch OHLCV Data with Pagination support for large limits (up to 100k).
+        Auto-pagination backwards from latest or until 'since' is reached.
         """
         clean_symbol = symbol.replace('/', '').replace(':', '').split('USDT')[0] + 'USDT'
         
-        # Max limit per request for Bitunix is typically 1000
+        # Max limit per request (Bitunix usually caps at 1000)
         MAX_LIMIT_PER_REQ = 1000
         
+        # Prepare timeframe in ms for pagination calculations
+        tf_ms_map = {
+            '1m': 60000,
+            '3m': 180000,
+            '5m': 300000,
+            '15m': 900000,
+            '30m': 1800000,
+            '1h': 3600000,
+            '2h': 7200000,
+            '4h': 14400000,
+            '6h': 21600000,
+            '12h': 43200000,
+            '1d': 86400000,
+            '1w': 604800000,
+            '1M': 2592000000
+        }
+        interval_ms = tf_ms_map.get(timeframe, 60000) # Default 1m
+
         all_ohlcv = []
         
-        # If no specific start time, we fetch backwards from now (or just latest N)
-        # But standard kline endpoint usually takes startTime and returns items AFTER that time.
-        # Or it returns latest if no time. 
-        # To get 100k candles, we need to loop. 
+        # We need to fetch 'limit' candles total.
+        # Simplest Strategy: Backward pagination from NOW (or from endTime if we had it).
+        # Since 'since' is optional, if provided we could fetch forward, but backward is usually safer for getting "latest N".
+        # If 'since' is NOT provided, user wants LATEST 'limit' candles. -> Backward loop.
+        # If 'since' IS provided, user wants data FROM 'since'. -> Forward loop (using startTime).
         
-        # Logic:
-        # 1. Calculate how many requests needed
-        # 2. Loop and append
-        # BUT: Bitunix API docs for pagination are needed. 
-        # Standard approach: Fetch latest. Get timestamp of oldest. Fetch again with endTime = oldest. 
-        # NOTE: Bitunix might use startTime/endTime. 
-        # Let's try simple batched approach assuming 'limit' works up to 1000.
-        
-        fetch_limit = limit
-        if fetch_limit > MAX_LIMIT_PER_REQ:
-             # Logic for deep pagination is complex without knowing exact API behavior (startTime vs endTime).
-             # SAFETY FALLBACK: Just cap at 1000 for now to prevent 0 results if API rejects >1000.
-             # User asked for 100k, but 1000 is better than crash.
-             # Ideally we loop. Let's try to loop backwards if 'endTime' is supported, or forwards if 'startTime'.
-             # Given I don't have docs on 'endTime', I will cap at 1000 to fix the immediate crash.
-             # 1000 candles is enough for basic XGBoost (16 hours of 1m data).
-             fetch_limit = 1000
-             
-        params = {
-            'symbol': clean_symbol,
-            'interval': timeframe,
-            'limit': fetch_limit
-        }
+        current_limit = limit
         
         if since:
-            params['startTime'] = since
+            # FORWARD PAGINATION (using startTime)
+            current_start_time = since
             
-        try:
-            data = await self._request('GET', '/futures/market/kline', params=params)
-        except Exception as e:
-            # If large limit caused error, try small default
-            if fetch_limit > 500:
-                params['limit'] = 500
+            while len(all_ohlcv) < limit:
+                # Calculate how many to fetch this batch
+                remaining = limit - len(all_ohlcv)
+                batch_size = min(remaining, MAX_LIMIT_PER_REQ)
+                
+                params = {
+                    'symbol': clean_symbol,
+                    'interval': timeframe,
+                    'limit': batch_size,
+                    'startTime': current_start_time
+                }
+                
                 data = await self._request('GET', '/futures/market/kline', params=params)
+                
+                if not data or not isinstance(data, list) or len(data) == 0:
+                    break # No more data
+                
+                batch_ohlcv = self._parse_ohlcv_response(data)
+                all_ohlcv.extend(batch_ohlcv)
+                
+                # Next start time = last item time + interval
+                last_time = batch_ohlcv[-1][0]
+                current_start_time = last_time + interval_ms
+                
+                # Safety break if we aren't moving (duplicates)
+                if len(batch_ohlcv) < batch_size: 
+                    break # End of history reached
+                    
+        else:
+            # BACKWARD PAGINATION (Latest -> Past)
+            # Bitunix 'endTime' is usually inclusive or exclusive. 
+            # We assume we want data BEFORE a certain time.
+            
+            # Initial end_time can be omitted to get latest
+            current_end_time = None 
+            
+            while len(all_ohlcv) < limit:
+                remaining = limit - len(all_ohlcv)
+                batch_size = min(remaining, MAX_LIMIT_PER_REQ)
+                
+                params = {
+                    'symbol': clean_symbol,
+                    'interval': timeframe,
+                    'limit': batch_size
+                }
+                
+                if current_end_time:
+                    params['endTime'] = current_end_time
+                
+                try:
+                    data = await self._request('GET', '/futures/market/kline', params=params)
+                except Exception as e:
+                    print(f"Fetch error: {e}")
+                    break
+
+                if not data or not isinstance(data, list) or len(data) == 0:
+                    break
+
+                batch_ohlcv = self._parse_ohlcv_response(data)
+                
+                # If we requested with endTime, the API might return data ending at endTime.
+                # Since we want to prepend/append, let's just collect all then sort.
+                # Actually, backward fetch means we get [T-1000 ... T]. 
+                # We want the next batch to be [T-2000 ... T-1001].
+                
+                # Prepend to our main list because we are going backwards?
+                # Actually, easier to extend and then sort/reverse at the end if we want.
+                # BUT standard is to keep them sorted old->new. 
+                # So if we fetch [Old ... New], we should Insert at beginning? 
+                # Yes, all_ohlcv = batch_ohlcv + all_ohlcv
+                
+                all_ohlcv = batch_ohlcv + all_ohlcv
+                
+                # Next end_time = oldest in this batch (index 0) - 1ms (or interval)
+                oldest_time_in_batch = batch_ohlcv[0][0]
+                current_end_time = oldest_time_in_batch - 1 # Minus 1ms to be safe/exclusive
+                
+                # Optimization: if API returned fewer than we asked, we probably hit the beginning of time
+                if len(batch_ohlcv) < batch_size:
+                    break
+                    
+        # Final Trim (in case we over-fetched due to batching)
+        if len(all_ohlcv) > limit:
+            if since:
+                all_ohlcv = all_ohlcv[:limit] # Keep first N
             else:
-                raise e
-        
+                all_ohlcv = all_ohlcv[-limit:] # Keep last N
+                
+        return all_ohlcv
+
+    def _parse_ohlcv_response(self, data):
         ohlcv = []
-        if isinstance(data, list):
-            for candle in data:
-                # Handle both dict and list formats safely
-                ts, o, h, l, c, v = 0, 0, 0, 0, 0, 0
-                
-                if isinstance(candle, dict):
-                     ts = int(candle.get('time', 0))
-                     o = float(candle.get('open', 0))
-                     h = float(candle.get('high', 0))
-                     l = float(candle.get('low', 0))
-                     c = float(candle.get('close', 0))
-                     v = float(candle.get('vol', 0))
-                elif isinstance(candle, list) and len(candle) >= 6:
-                     ts = int(candle[0])
-                     o = float(candle[1])
-                     h = float(candle[2])
-                     l = float(candle[3])
-                     c = float(candle[4])
-                     v = float(candle[5])
-                
-                ohlcv.append([ts, o, h, l, c, v])
-                
+        for candle in data:
+            ts, o, h, l, c, v = 0, 0, 0, 0, 0, 0
+            
+            if isinstance(candle, dict):
+                 ts = int(candle.get('time', 0))
+                 o = float(candle.get('open', 0))
+                 h = float(candle.get('high', 0))
+                 l = float(candle.get('low', 0))
+                 c = float(candle.get('close', 0))
+                 v = float(candle.get('vol', 0)) # Note: vol not volume per previous check
+            elif isinstance(candle, list) and len(candle) >= 6:
+                 ts = int(candle[0])
+                 o = float(candle[1])
+                 h = float(candle[2])
+                 l = float(candle[3])
+                 c = float(candle[4])
+                 v = float(candle[5])
+            
+            ohlcv.append([ts, o, h, l, c, v])
+        
+        # Ensure sorted by timestamp generic
+        ohlcv.sort(key=lambda x: x[0])
         return ohlcv
 
     # ==========================================================
@@ -276,14 +350,35 @@ class BitunixExchange:
     # ==========================================================
 
     async def fetch_balance(self):
-        """Get USDT Balance"""
+        """
+        Get USDT Balance
+        Endpoint: /api/v1/futures/account based on docs
+        """
         # Endpoint: /futures/account?marginCoin=USDT
         data = await self._request('GET', '/futures/account', params={'marginCoin': 'USDT'}, signed=True)
         
-        # Map to CCXT structure
-        total = float(data.get('accountEquity', 0))
-        used = float(data.get('usedMargin', 0))
-        free = float(data.get('availableMargin', 0))
+        # Doc response example: 
+        # "data": [{"marginCoin":"USDT", "available":"1000", "margin":"10", ...}]
+        
+        balance_data = None
+        if isinstance(data, list) and len(data) > 0:
+            balance_data = data[0]
+        elif isinstance(data, dict):
+            balance_data = data
+            
+        if not balance_data:
+             return {'USDT': {'total': 0.0, 'used': 0.0, 'free': 0.0}}
+
+        total = float(balance_data.get('accountEquity', getattr(balance_data, 'marginBalance', 0) or 0)) 
+        # Note: Docs use 'accountEquity' in some places, 'available'+'margin' in others. 
+        # Let's trust 'accountEquity' if present, else sum available + margin.
+        if 'accountEquity' not in balance_data:
+             avail = float(balance_data.get('available', 0))
+             margin = float(balance_data.get('margin', 0))
+             total = avail + margin
+        
+        free = float(balance_data.get('available', 0))
+        used = float(balance_data.get('margin', 0))
         
         return {
             'USDT': {
@@ -296,16 +391,14 @@ class BitunixExchange:
     async def create_order(self, symbol, type, side, amount, price=None, params={}):
         """
         Create Order
-        symbol: ETH/USDT:USDT -> ETHUSDT
-        type: limit, market
-        side: buy, sell
-        amount: quantity
-        price: limit price
+        Bitunix Keys: symbol, side(1/2), orderType(1/2), qty, price
         """
         clean_symbol = symbol.replace('/', '').replace(':', '').split('USDT')[0] + 'USDT'
         
-        # endpoint: /futures/trade/place_order
-        # body: symbol, side(1=Buy, 2=Sell), type(1=Limit, 2=Market), qty, price(if limit)
+        # Mappings based on Docs
+        # Side: 1=Buy, 2=Sell
+        # OrderType: 1=Limit, 2=Market
+        # Effect: 1=GTC, 2=IOC, 3=FOK
         
         side_map = {'buy': 1, 'sell': 2}
         type_map = {'limit': 1, 'market': 2}
@@ -313,18 +406,21 @@ class BitunixExchange:
         body = {
             'symbol': clean_symbol,
             'side': side_map[side.lower()],
-            'type': type_map[type.lower()],
-            'qty': str(amount),
-            'reduceOnly': 1 if params.get('reduceOnly') else 0
+            'orderType': type_map[type.lower()], # Doc says 'orderType', not 'type'
+            'qty': str(amount),             # Doc says 'qty', not 'amount'
+            'marginCoin': 'USDT',           # Might be needed
+            'reduceOnly': True if params.get('reduceOnly') else False
         }
         
         if type.lower() == 'limit':
             if not price:
                 raise Exception("Price required for limit order")
             body['price'] = str(price)
+            body['effect'] = 1 # GTC by default
             
         data = await self._request('POST', '/futures/trade/place_order', body=body, signed=True)
         
+        # Response: {"orderId": "...", ...}
         return {
             'id': str(data.get('orderId')),
             'symbol': symbol,
@@ -332,7 +428,7 @@ class BitunixExchange:
             'type': type,
             'amount': amount,
             'price': price,
-            'status': 'open' # Valid assumption for new order
+            'status': 'open'
         }
         
     async def create_limit_buy_order(self, symbol, amount, price, params={}):
@@ -351,7 +447,6 @@ class BitunixExchange:
         """Cancel Order by ID"""
         clean_symbol = symbol.replace('/', '').replace(':', '').split('USDT')[0] + 'USDT'
         
-        # Endpoint: /futures/trade/cancel_order
         body = {
             'orderId': str(id),
             'symbol': clean_symbol
@@ -360,119 +455,123 @@ class BitunixExchange:
         return await self._request('POST', '/futures/trade/cancel_order', body=body, signed=True)
 
     async def fetch_funding_history(self, symbol, since=None, limit=100):
-        """
-        Fetch funding history. 
-        Endpoint: /futures/funding_rate/history (check exact path)
-        """
-        # For now, return empty list to prevent crashes because specific endpoint docs
-        # might vary. Implementing 'get_funding_rate' might be easier for current rate.
-        # But manager calls funding_history.
+        # Stub
         return []
 
     async def fetch_open_orders(self, symbol):
-        """Fetch Open Orders - Note: Bitunix might use POST/GET check docs"""
+        """Fetch Open Orders"""
         clean_symbol = symbol.replace('/', '').replace(':', '').split('USDT')[0] + 'USDT'
         
-        # Endpoint: /futures/trade/open_orders (Usually GET)
-        data = await self._request('GET', '/futures/trade/open_orders', params={'symbol': clean_symbol}, signed=True)
+        # Endpoint: /futures/trade/open_orders
+        try:
+             # Params usually symbol needed
+             data = await self._request('GET', '/futures/trade/open_orders', params={'symbol': clean_symbol}, signed=True)
+        except Exception:
+             return []
         
         orders = []
-        for o in data:
-            orders.append({
-                'id': str(o.get('orderId')),
-                'symbol': symbol,
-                'status': 'open',
-                'side': 'buy' if o.get('side') == 1 else 'sell',
-                'type': 'limit' if o.get('type') == 1 else 'market',
-                'price': float(o.get('price', 0)),
-                'amount': float(o.get('qty', 0)),
-                'filled': float(o.get('cumQty', 0)),
-                'timestamp': o.get('createTime')
-            })
+        if isinstance(data, list):
+            for o in data:
+                # Mapping side/type back
+                s_map = {1: 'buy', 2: 'sell'}
+                t_map = {1: 'limit', 2: 'market'}
+                
+                orders.append({
+                    'id': str(o.get('orderId')),
+                    'symbol': symbol,
+                    'status': 'open',
+                    'side': s_map.get(o.get('side'), 'buy'),
+                    'type': t_map.get(o.get('orderType'), 'limit'),
+                    'price': float(o.get('price', 0)),
+                    'amount': float(o.get('qty', 0)),
+                    'filled': float(o.get('cumQty', 0)),
+                    'timestamp': o.get('createTime') or o.get('ctime')
+                })
         return orders
         
     async def fetch_positions(self, symbols=None):
-        """Fetch Positions"""
-        # Endpoint: /futures/position/pending
-        data = await self._request('GET', '/futures/position/pending', params={'marginCoin': 'USDT'}, signed=True)
-        
-        positions = []
+        """
+        Fetch Positions
+        Endpoint: /api/v1/futures/position/get_pending_positions
+        """
+        params = {'marginCoin': 'USDT'}
+        # If specific symbol requested, API might support 'symbol' param
         target_symbol = symbols[0] if symbols and len(symbols) > 0 else None
         
+        if target_symbol:
+             clean_target = target_symbol.replace('/', '').replace(':', '').split('USDT')[0] + 'USDT'
+             params['symbol'] = clean_target
+
+        data = await self._request('GET', '/futures/position/get_pending_positions', params=params, signed=True)
+        
+        positions = []
+        
+        # Ensure data is list
+        if not isinstance(data, list):
+             return []
+             
         for p in data:
             raw_symbol = p.get('symbol', 'UNKNOWN')
-            # Map back to CCXT format if it matches our target
-            # Bitunix: ETHUSDT -> Bot: ETH/USDT:USDT
+            
+            # Map back to internal format
             final_symbol = raw_symbol
+            # Simple heuristic since we only trade USDT pairs
+            if raw_symbol.endswith('USDT'):
+                base = raw_symbol.replace('USDT', '')
+                final_symbol = f"{base}/USDT:USDT"
+
+            size = float(p.get('qty', 0)) 
+            side_str = p.get('side', '').upper() # "LONG" or "SHORT" or int 1/2? Docs say "LONG" string in example?
+            # Docs example: "side": "LONG"
             
-            if target_symbol:
-                 # Check if raw symbol matches the target symbol's base/quote
-                 # e.g. target="ETH/USDT:USDT", raw="ETHUSDT"
-                 clean_target = target_symbol.replace('/', '').replace(':', '').split('USDT')[0] + 'USDT'
-                 if raw_symbol == clean_target:
-                     final_symbol = target_symbol
-            
-            size = float(p.get('qty', 0)) # Absolute
-            side_int = p.get('side') # 1=Buy, 2=Sell
-            
-            # Convert to signed size
-            signed_size = size if side_int == 1 else -size
-            
+            if side_str == 'LONG':
+                 signed_contracts = size
+                 side_key = 'long'
+            elif side_str == 'SHORT':
+                 signed_contracts = -size
+                 side_key = 'short'
+            else:
+                 # Fallback if int
+                 if side_str == 1: 
+                     signed_contracts = size
+                     side_key = 'long'
+                 else:
+                     signed_contracts = -size
+                     side_key = 'short'
+
             positions.append({
                 'symbol': final_symbol,
-                'contracts': signed_size,
-                'notional': float(p.get('value', 0)), 
-                'unrealizedPnl': float(p.get('unrealizedPnl', 0)),
+                'contracts': signed_contracts,
+                'notional': float(p.get('value', 0) or p.get('entryValue', 0)), 
+                'unrealizedPnl': float(p.get('unrealizedPNL', 0)), # Note Capital PNL in docs example
                 'entryPrice': float(p.get('entryPrice', 0)),
                 'liquidationPrice': float(p.get('liqPrice', 0)),
                 'leverage': float(p.get('leverage', 0)),
                 'initialMargin': float(p.get('margin', 0)),
-                'side': 'long' if side_int == 1 else 'short'
+                'side': side_key
             })
         
         return positions
 
     async def set_leverage(self, leverage, symbol):
-        """Set Leverage"""
+        """
+        Set Leverage
+        Endpoint: /api/v1/futures/account/change_leverage
+        """
         clean_symbol = symbol.replace('/', '').replace(':', '').split('USDT')[0] + 'USDT'
         
-        # Endpoint: /futures/trade/set_leverage
         body = {
             'symbol': clean_symbol,
-            'leverage': str(leverage),
-            'side': 1 # 1=Long, 2=Short? Usually share leverage. Official docs say side 0? check docs. 
-                      # Assuming 0 or generic. If errors, we might need to set for both 1 and 2
+            'leverage': int(leverage),
+            'marginCoin': 'USDT'
         }
-        # Official demo doesn't show set_leverage, I'll assume generic or try both.
-        # Actually API often requires setting for both sides in hedge mode, but we prefer One-Way
-        # Let's try sending without side if possible, or defaulting to 1 (Long) then 2 (Short)
         
-        # Safe bet: Set for both just in case
-        try:
-            body['side'] = 1
-            await self._request('POST', '/futures/trade/set_leverage', body=body, signed=True)
-            body['side'] = 2
-            await self._request('POST', '/futures/trade/set_leverage', body=body, signed=True)
-        except:
-             pass # Ignore if error on one side
-
+        await self._request('POST', '/futures/account/change_leverage', body=body, signed=True)
         return True
 
     async def set_position_mode(self, hedged, symbol):
-        """Set Position Mode"""
-        # Endpoint: /futures/trade/position_mode (if exists)
-        # 1=One-Way, 2=Hedge
-        mode = 2 if hedged else 1
-        
-        try:
-             # This endpoint is a guess based on pattern. If it doesn't exist, we just mock return True
-             # because Bitunix might not strictly enforce manual switching or it's global
-             # However, typically it's needed.
-             # If I can't confirm endpoint, logging is safest.
-             pass
-        except:
-             pass
-        return True
+        # Implementation depends on specific endpoint availability
+        pass
 
     # ==========================================================
     # Helper Methods
@@ -485,6 +584,5 @@ class BitunixExchange:
         return "{:.{p}f}".format(float(amount), p=self.amount_precision)
         
     async def fetch_my_trades(self, symbol, limit=50):
-        # Not critical for Basic V1, return empty
         return []
 

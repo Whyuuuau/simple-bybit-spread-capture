@@ -25,8 +25,8 @@ EXCHANGE_NAME = 'bitunix'
 # ============================================================================
 
 # Symbol Configuration
-symbol = 'ETH/USDT:USDT'  # Internal format
-base_symbol = 'ETHUSDT'   # API format
+symbol = 'SOL/USDT:USDT'  # Internal format
+base_symbol = 'SOLUSDT'   # API format
 
 # Leverage Settings
 LEVERAGE = 10  
@@ -58,12 +58,12 @@ MAX_POSITION_SIZE_USD = 600
 POSITION_REBALANCE_THRESHOLD_USD = 300  
 POSITION_CHECK_INTERVAL = 5  
 
-MIN_ORDER_SIZE_USD = 15   
-MAX_ORDER_SIZE_USD = 200  
-BASE_ORDER_SIZE_USD = 150  
+MIN_ORDER_SIZE_USD = 5    # Reduced for smaller 100 START balance
+MAX_ORDER_SIZE_USD = 50   # Reduced for smaller 100 START balance
+BASE_ORDER_SIZE_USD = 20  # Reduced for smaller 100 START balance
 
-MAX_DAILY_LOSS_USD = -50   
-MAX_TOTAL_LOSS_USD = -80   
+MAX_DAILY_LOSS_USD = -20   
+MAX_TOTAL_LOSS_USD = -50   
 STOP_LOSS_PCT = 4.0        
 TAKE_PROFIT_PCT = 0.0015   
 
@@ -97,8 +97,8 @@ FUNDING_FEE_INTERVAL = 8 * 3600
 # PRECISION SETTINGS
 # ============================================================================
 
-PRICE_PRECISION = 2  
-AMOUNT_PRECISION = 3  
+PRICE_PRECISION = 3   # SOL needs 3 decimals usually (e.g. 143.505)
+AMOUNT_PRECISION = 1  # SOL quantity usually 1 decimal (e.g. 0.1 SOL)
 
 # ============================================================================
 # BALANCE & CAPITAL
