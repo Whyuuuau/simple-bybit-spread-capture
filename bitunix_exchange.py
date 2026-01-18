@@ -616,7 +616,7 @@ class BitunixExchange:
                 'symbol': final_symbol,
                 'contracts': signed_contracts,
                 'notional': float(p.get('value', 0) or p.get('entryValue', 0)), 
-                'unrealizedPnl': float(p.get('unrealizedPNL', 0)), # Note Capital PNL in docs example
+                'unrealizedPnl': float(p.get('unrealizedPNL', 0)), # Correct exact key from docs
                 'entryPrice': float(p.get('entryPrice', 0)),
                 'liquidationPrice': float(p.get('liqPrice', 0)),
                 'leverage': float(p.get('leverage', 0)),

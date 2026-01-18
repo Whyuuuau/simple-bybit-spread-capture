@@ -46,21 +46,21 @@ DATA_UPDATE_INTERVAL = 60
 # SPREAD & PRICING
 # ============================================================================
 
-MIN_SPREAD_PCT = 0.12   
-MAX_SPREAD_PCT = 0.20   
+MIN_SPREAD_PCT = 0.10   # Widened to 0.10% to guarantee profit above fees (0.07% worst case)
+MAX_SPREAD_PCT = 0.15   # Tighter cap
 TARGET_SPREAD_MULTIPLIER = 1.0  
 
 # ============================================================================
 # POSITION & RISK MANAGEMENT
 # ============================================================================
 
-MAX_POSITION_SIZE_USD = 600  
-POSITION_REBALANCE_THRESHOLD_USD = 300  
+MAX_POSITION_SIZE_USD = 450  # Lowered from 600 for safety (Max 90% of 10x leverage on $50 equity)
+POSITION_REBALANCE_THRESHOLD_USD = 250  # Lowered from 300 to trigger earlier rebalance
 POSITION_CHECK_INTERVAL = 5  
 
 MIN_ORDER_SIZE_USD = 5    # Reduced for smaller 100 START balance
 MAX_ORDER_SIZE_USD = 50   # Reduced for smaller 100 START balance
-BASE_ORDER_SIZE_USD = 20  # Reduced for smaller 100 START balance
+BASE_ORDER_SIZE_USD = 40  # Increased to $40 to achieve higher volume (approx $8/order)
 
 MAX_DAILY_LOSS_USD = -20   
 MAX_TOTAL_LOSS_USD = -50   

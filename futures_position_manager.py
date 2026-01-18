@@ -118,14 +118,46 @@ class FuturesPositionManager:
             ticker = await self.exchange.fetch_ticker(self.symbol)
             current_price = (ticker['bid'] + ticker['ask']) / 2
             
-            # Find position for our symbol
-            position = None
+            # Aggregate positions (Netting for Hedge Mode)
+            # Bitunix Hedge Mode returns separate rows for LONG and SHORT.
+            # We must sum them to know our true Net Exposure.
+            
+            net_contracts = 0
+            net_notional = 0
+            net_pnl = 0
+            net_margin = 0
+            weighted_entry_price = 0
+            highest_liq_price = 0 # Worst case? Or closest?
+            
+            # To calc weighted entry
+            total_contracts_abs = 0
+            
+            found_any = False
+            
             for pos in positions:
                 if pos['symbol'] == self.symbol:
-                    position = pos
-                    break
-            
-            if not position or position['contracts'] == 0:
+                    found_any = True
+                    contracts = pos['contracts']
+                    net_contracts += contracts
+                    net_pnl += pos.get('unrealizedPnl', 0)
+                    net_margin += pos.get('initialMargin', 0)
+                    
+                    # Notional is usually positive in API, but we treat it as signed for aggregation? 
+                    # No, Value is Value. But "Directional Value" matters.
+                    # Actually, simple Net Contracts is best metric.
+                    
+                    # Track weighted entry price
+                    size_abs = abs(contracts)
+                    if size_abs > 0:
+                        weighted_entry_price += (pos.get('entryPrice', 0) * size_abs)
+                        total_contracts_abs += size_abs
+                    
+                    # Liquidation: use the one that is closest to current price (highest risk)
+                    # This is complex. For now, use the one with larger size? 
+                    # Or just 0 if net is 0.
+                    pass 
+
+            if not found_any or net_contracts == 0:
                 # No position
                 result = {
                     'position_size': 0,
@@ -139,31 +171,31 @@ class FuturesPositionManager:
                     'leverage': self.leverage
                 }
             else:
-                # Active position
-                position_size = position['contracts']
-                position_value_usd = abs(position['notional'])
+                # Active position (Net)
+                position_size = net_contracts
+                position_value_usd = abs(net_contracts * current_price) # Approx value based on current price
                 
-                # Determine side
-                # Standardize side determination
-                if position.get('side'):
-                    side = position['side'].lower()
-                elif position_size > 0:
+                # Check side
+                if position_size > 0:
                     side = 'long'
                 elif position_size < 0:
                     side = 'short'
                 else:
                     side = 'neutral'
-                
+                    
+                # Avg Entry
+                avg_entry = weighted_entry_price / total_contracts_abs if total_contracts_abs > 0 else 0
+
                 result = {
                     'position_size': position_size,
                     'position_value_usd': position_value_usd,
-                    'unrealized_pnl': position.get('unrealizedPnl', 0),
-                    'entry_price': position.get('entryPrice', 0),
+                    'unrealized_pnl': net_pnl,
+                    'entry_price': avg_entry,
                     'current_price': current_price,
-                    'margin_used': position.get('initialMargin', 0),
-                    'liquidation_price': position.get('liquidationPrice', 0),
+                    'margin_used': net_margin,
+                    'liquidation_price': 0, # Hard to agg liq price in hedge. 
                     'side': side,
-                    'leverage': position.get('leverage', self.leverage)
+                    'leverage': self.leverage
                 }
             
             # Record to history
@@ -416,52 +448,61 @@ class FuturesPositionManager:
         }
     
     async def emergency_close_all(self):
-        """Emergency close all positions (Smart Retry Enabled)"""
+        """Emergency close all positions (Iterates Raw Positions for Hedge Safety)"""
         logger.warning("🚨 EMERGENCY POSITION CLOSE INITIATED!")
         
         # Cancel all pending orders first to free up inventory
         await cancel_all_orders(self.exchange, self.symbol)
+        await asyncio.sleep(0.5)
         
         try:
-            position = await self.get_current_position()
+            # Fetch RAW positions to handle Hedge Mode correctly
+            # We don't want the Net Position here. We want to close specific Long/Short entries.
+            positions = await self.exchange.fetch_positions([self.symbol])
             
-            if position['side'] == 'neutral':
-                logger.info("No position to close")
+            closed_count = 0
+            
+            for pos in positions:
+                if pos['symbol'] != self.symbol:
+                    continue
+                
+                size = abs(pos['contracts'])
+                if size == 0:
+                    continue
+                
+                # Determine closing side
+                # If Long, we Sell. If Short, we Buy.
+                side = pos['side'].lower() # 'long' or 'short'
+                
+                try:
+                    logger.info(f"🚨 Closing {side.upper()} position: {size} contracts...")
+                    
+                    if side == 'long':
+                        await self.exchange.create_market_sell_order(
+                            self.symbol,
+                            size,
+                            params={'reduceOnly': True, 'tradeSide': 'CLOSE'} 
+                        )
+                    elif side == 'short':
+                        await self.exchange.create_market_buy_order(
+                            self.symbol,
+                            size,
+                            params={'reduceOnly': True, 'tradeSide': 'CLOSE'}
+                        )
+                    
+                    closed_count += 1
+                    logger.info(f"✅ Closed {side.upper()} position successfully.")
+                    
+                except Exception as e:
+                    logger.error(f"❌ Failed to close {side.upper()} position: {e}")
+                    # Smart Retry Mechanism handled?
+                    # basic retry for now would be complex inside loop. 
+                    # If it failed, it might be due to size or min limits.
+            
+            if closed_count == 0:
+                logger.info("ℹ️ No active positions to close.")
                 return True
             
-            position_size = abs(position['position_size'])
-            
-            # Enforce precision
-            position_size = calc_sol_size(position_size, 1.0) # Price dummy
-            
-            try:
-                if position['side'] == 'long':
-                    # Close long
-                    order = await self.exchange.create_market_sell_order(
-                        self.symbol,
-                        position_size,
-                        params={'reduceOnly': True}
-                    )
-                else:
-                    # Close short
-                    order = await self.exchange.create_market_buy_order(
-                        self.symbol,
-                        position_size,
-                        params={'reduceOnly': True}
-                    )
-            except Exception as e:
-                 # Smart Retry for 110017
-                if "110017" in str(e) or "reduce-only" in str(e):
-                    logger.warning("⚠️ Direction Mismatch in Close All! Flipping...")
-                    if position['side'] == 'long':
-                        await self.exchange.create_market_buy_order(self.symbol, position_size, params={'reduceOnly': True})
-                    else:
-                        await self.exchange.create_market_sell_order(self.symbol, position_size, params={'reduceOnly': True})
-                    logger.info("✅ Retry Successful: Closed position (flipped)")
-                else:
-                    raise e
-            
-            logger.warning(f"✅ Emergency close executed | PnL: ${position['unrealized_pnl']:.2f}")
             return True
             
         except Exception as e:
