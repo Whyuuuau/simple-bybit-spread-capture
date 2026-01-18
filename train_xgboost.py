@@ -67,7 +67,7 @@ async def main():
         historical_data = await fetch_historical_data(
             exchange, 
             symbol, 
-            lookback_period=50000  # ✅ 50k candles for better training!
+            lookback_period=100000  # ✅ 50k candles for better training!
         )
         
         if historical_data.empty:

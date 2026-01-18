@@ -9,37 +9,11 @@ load_dotenv()
 # ============================================================================
 
 # Bitunix Keys (NEW)
-bitunix_api_key = os.getenv('BITUNIX_API_KEY')
-bitunix_api_secret = os.getenv('BITUNIX_API_SECRET')
-
-# ============================================================================
-# EXCHANGE_SELECTION
-# ============================================================================
-
 # Exchange selection
 EXCHANGE_NAME = 'bitunix' 
 
-# Initialize exchange based on selection
-exchange = None
 
-try:
-    if EXCHANGE_NAME == 'bitunix':
-        from bitunix_exchange import BitunixExchange
-        exchange = BitunixExchange({
-            'apiKey': bitunix_api_key,
-            'secret': bitunix_api_secret,
-            'options': {
-                'defaultType': 'swap',
-                'price_precision': PRICE_PRECISION,
-                'amount_precision': AMOUNT_PRECISION,
-            }
-        })
-        print("✅ Initialized Bitunix Exchange")
-        
-except Exception as e:
-    print(f"❌ Error initializing exchange: {e}")
-    # Fallback/Safety
-    exchange = None
+
 
 
 # ============================================================================
@@ -191,3 +165,34 @@ if config_issues:
     for issue in config_issues:
         print(f"  {issue}")
     print()
+
+
+# ============================================================================
+# EXCHANGE INITIALIZATION (MOVED TO BOTTOM)
+# ============================================================================
+
+# Load keys here ensuring env is ready
+bitunix_api_key = os.getenv('BITUNIX_API_KEY')
+bitunix_api_secret = os.getenv('BITUNIX_API_SECRET')
+
+# Initialize exchange
+exchange = None
+
+try:
+    if EXCHANGE_NAME == 'bitunix':
+        from bitunix_exchange import BitunixExchange
+        exchange = BitunixExchange({
+            'apiKey': bitunix_api_key,
+            'secret': bitunix_api_secret,
+            'options': {
+                'defaultType': 'swap',
+                'price_precision': PRICE_PRECISION,
+                'amount_precision': AMOUNT_PRECISION,
+            }
+        })
+        print("✅ Initialized Bitunix Exchange")
+        
+except Exception as e:
+    print(f"❌ Error initializing exchange: {e}")
+    # Fallback/Safety
+    exchange = None

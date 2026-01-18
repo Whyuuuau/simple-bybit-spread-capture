@@ -17,7 +17,7 @@ while True:
             
             clear_screen()
             print("\033[92m" + "="*50 + "\033[0m")  # Green line
-            print(f" 🚀 BYBIT VOLUME BOT STATUS      \033[93m{data['last_update']}\033[0m")
+            print(f" 🚀 BITUNIX VOLUME BOT STATUS      \033[93m{data['last_update']}\033[0m")
             print("\033[92m" + "="*50 + "\033[0m")
             
             # Big Stats
