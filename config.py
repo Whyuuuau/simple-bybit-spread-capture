@@ -129,13 +129,15 @@ MAX_LEVERAGE = 12  # Max limit
 # ============================================================================
 
 # Number of orders per side
-num_orders = 10  # Reduced to 10 (Total 20) to respect Rate Limits with 0.1 SOL size
+# Number of orders per side
+num_orders = 5  # Reduced to 5 (Lighter payload for 3s Speed)
 
 # Order book depth
 ORDER_BOOK_DEPTH = 20  # Number of levels to fetch from order book
 
 # Order refresh settings
-ORDER_REFRESH_INTERVAL = 5   # Refresh every 5 seconds (Aggressive Chart Tracking)
+# Order refresh settings
+ORDER_REFRESH_INTERVAL = 3   # Refresh every 3 seconds (TURBO MODE)
 DATA_UPDATE_INTERVAL = 60  # Update historical data every 60 seconds
 
 # ============================================================================
@@ -143,9 +145,12 @@ DATA_UPDATE_INTERVAL = 60  # Update historical data every 60 seconds
 # ============================================================================
 
 # Spread settings (optimized for fees)
-MIN_SPREAD_PCT = 0.01   # 0.01% minimum
-MAX_SPREAD_PCT = 0.05   # 0.05% maximum (User Optimized Target)
-TARGET_SPREAD_MULTIPLIER = 0.5  # Target 50% of current spread
+# Spread settings (optimized for fees)
+# Fees: Maker 0.02% x 2 = 0.04% Roundtrip.
+# Target: 0.06% Spread gives 0.02% Net Profit per trade.
+MIN_SPREAD_PCT = 0.06   # 0.06% minimum (Tight & Profitable)
+MAX_SPREAD_PCT = 0.25   # 0.25% maximum
+TARGET_SPREAD_MULTIPLIER = 1.0  # Use full spread width
 
 # ============================================================================
 # POSITION & RISK MANAGEMENT

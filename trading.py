@@ -345,7 +345,7 @@ async def smart_order_management(exchange, symbol, target_orders, price_toleranc
         
         # Throttle between batches
         if i + BATCH_SIZE < len(tasks_to_run):
-            await asyncio.sleep(0.2) # Faster throttle (was 0.5s)
+            await asyncio.sleep(0.05) # Tiny buffer (50ms) for 5-order bursts
     
     logger.debug(f"Order management | Kept: {stats['kept']} | Cancelled: {stats['cancelled']} | Placed: {stats['placed']}")
     
