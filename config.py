@@ -9,8 +9,12 @@ load_dotenv()
 # ============================================================================
 
 # Bitunix Keys (NEW)
+bitunix_api_key = os.getenv('BITUNIX_API_KEY')
+bitunix_api_secret = os.getenv('BITUNIX_API_SECRET')
+
 # Exchange selection
-EXCHANGE_NAME = 'bitunix' 
+EXCHANGE_NAME = 'bitunix'
+ 
 
 
 
@@ -171,9 +175,8 @@ if config_issues:
 # EXCHANGE INITIALIZATION (MOVED TO BOTTOM)
 # ============================================================================
 
-# Load keys here ensuring env is ready
-bitunix_api_key = os.getenv('BITUNIX_API_KEY')
-bitunix_api_secret = os.getenv('BITUNIX_API_SECRET')
+# Keys loaded at top
+
 
 # Initialize exchange
 exchange = None
