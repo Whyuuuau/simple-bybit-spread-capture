@@ -6,6 +6,8 @@ from logger_config import setup_logger
 logger = setup_logger('PositionManager')
 
 
+from trading import calc_sol_size
+
 class FuturesPositionManager:
     """
     Manages FUTURES positions with leverage
@@ -260,7 +262,11 @@ class FuturesPositionManager:
             logger.info(f"🔄 Rebalancing position: ${position_value:.2f} {position['side'].upper()}")
             
             # Calculate amount to close (90% to avoid over-closing)
-            amount_to_close = abs(position_size) * 0.9
+            raw_amount = abs(position_size) * 0.9
+            approx_price = position_value / abs(position_size) if abs(position_size) > 0 else 0
+            
+            # Ensure valid precision and min size
+            amount_to_close = calc_sol_size(raw_amount, approx_price)
             
             if amount_to_close <= 0:
                 return False

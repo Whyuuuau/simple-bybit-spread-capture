@@ -146,10 +146,10 @@ DATA_UPDATE_INTERVAL = 60  # Update historical data every 60 seconds
 
 # Spread settings (optimized for fees)
 # Spread settings (optimized for fees)
+# Spread settings (optimized for fees)
 # Fees: Maker 0.02% x 2 = 0.04% Roundtrip.
-# Target: 0.06% Spread gives 0.02% Net Profit per trade.
-MIN_SPREAD_PCT = 0.06   # 0.06% minimum (Tight & Profitable)
-MAX_SPREAD_PCT = 0.25   # 0.25% maximum
+MIN_SPREAD_PCT = 0.05   # 0.05% (VOLUME MODE: Razor Thin for Max Fills)
+MAX_SPREAD_PCT = 0.20   # 0.20% maximum
 TARGET_SPREAD_MULTIPLIER = 1.0  # Use full spread width
 
 # ============================================================================
@@ -158,15 +158,15 @@ TARGET_SPREAD_MULTIPLIER = 1.0  # Use full spread width
 
 # Position limits
 # Position limits
-MAX_POSITION_SIZE_USD = 200  # Increased to $200 (Allows ~13 orders of 0.1 SOL)
-POSITION_REBALANCE_THRESHOLD_USD = 100  # Rebalance when exceeds $100
-POSITION_CHECK_INTERVAL = 10  # Check position every 10 seconds
+MAX_POSITION_SIZE_USD = 600  # Tripled for Volume (Utilization ~60%)
+POSITION_REBALANCE_THRESHOLD_USD = 300  # Rebalance at $300
+POSITION_CHECK_INTERVAL = 5  # Check position every 5 seconds
 
 # Order size limits
 # Order size limits
 MIN_ORDER_SIZE_USD = 15   # Must be >= 0.1 SOL (~$15)
-MAX_ORDER_SIZE_USD = 25  # Increased slightly
-BASE_ORDER_SIZE_USD = 15  # Base 0.1 SOL
+MAX_ORDER_SIZE_USD = 200  # Increased to allow $30-40 per order
+BASE_ORDER_SIZE_USD = 150  # Target Grid Size $150 (5 orders x $30)
 
 # Risk limits
 # Risk limits
@@ -179,8 +179,8 @@ TAKE_PROFIT_PCT = 0.002    # 0.2% Take Profit (Covers ~0.12% fees + profit)
 # VOLUME TARGETS
 # ============================================================================
 
-TARGET_VOLUME_PER_HOUR = 3000   # Target $3k volume/hour
-TARGET_VOLUME_PER_DAY = 70000   # Target $70k volume/day
+TARGET_VOLUME_PER_HOUR = 40000   # Target $40k volume/hour
+TARGET_VOLUME_PER_DAY = 1000000   # Target $1M volume/day
 
 # ============================================================================
 # ML MODEL SETTINGS
@@ -198,9 +198,9 @@ ML_CONFIDENCE_THRESHOLD = 0.60
 # FEES & COSTS
 # ============================================================================
 
-# Bybit futures fees
-MAKER_FEE_PCT = 0.01  # 0.01% maker fee
-TAKER_FEE_PCT = 0.06  # 0.06% taker fee
+# Bybit futures fees (User Account Specific)
+MAKER_FEE_PCT = 0.02  # 0.02% maker fee
+TAKER_FEE_PCT = 0.05  # 0.05% taker fee
 FUNDING_FEE_INTERVAL = 8 * 3600  # 8 hours in seconds
 
 # ============================================================================
@@ -247,15 +247,10 @@ EXCHANGE_CONFIG = {
 # Get current exchange config
 current_config = EXCHANGE_CONFIG.get(EXCHANGE_NAME, EXCHANGE_CONFIG['bybit'])
 
-# Calculate minimum profitable spread
-# Round-trip with maker both sides: 0.01% + 0.01% = 0.02%
-# Round-trip with maker+taker: 0.01% + 0.06% = 0.07%
-# Safety margin: 1.5x
-MIN_PROFITABLE_SPREAD_PCT = (MAKER_FEE_PCT + TAKER_FEE_PCT) * 1.5  # 0.105%
-
-# Ensure MIN_SPREAD is at least profitable
-if MIN_SPREAD_PCT < MIN_PROFITABLE_SPREAD_PCT:
-    MIN_SPREAD_PCT = MIN_PROFITABLE_SPREAD_PCT
+# Safety Override REMOVED for Volume Mode
+# We intentionally use tight spreads (0.05%) for maximum fill rate
+# even if profit per trade is minimal (0.01%).
+pass
 
 # ============================================================================
 # DEMO MONEY APPLICATION

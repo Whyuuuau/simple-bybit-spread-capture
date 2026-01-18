@@ -455,6 +455,7 @@ class PnLTracker:
                 'matched_pnl': matched_pnl,  # From completed round-trips
                 'unmatched_value': unmatched_value,  # From open positions
                 'estimated_pnl': matched_pnl - total_fees_paid,  # Conservative estimate
+                'realized_pnl': matched_pnl - total_fees_paid,  # Fix for KeyError in main.py
                 'trades_processed': len(self.processed_order_ids)
             }
             
