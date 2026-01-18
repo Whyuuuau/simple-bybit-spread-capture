@@ -151,6 +151,9 @@ class HybridVolumeBot:
         try:
             logger.info("🔧 Initializing bot...")
             
+            # Ensure One-Way Mode (Netting) for Grid Strategy
+            await self.position_manager.ensure_one_way_mode()
+            
             # Set leverage on demo exchange
             logger.info(f"Setting leverage to {self.leverage}x...")
             try:

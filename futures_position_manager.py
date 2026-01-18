@@ -61,6 +61,37 @@ class FuturesPositionManager:
         except Exception as e:
             logger.error(f"❌ Failed to set leverage: {e}")
             return False
+
+    async def ensure_one_way_mode(self):
+        """
+        Ensure One-Way Mode (Netting) is enabled.
+        This bot requires One-Way mode to function correctly.
+        """
+        try:
+            # Check if set_position_mode is supported
+            if not hasattr(self.exchange, 'set_position_mode'):
+                logger.warning("⚠️ Exchange does not support set_position_mode")
+                return False
+                
+            # strict (One-Way) = False (hedged) -> True? No.
+            # set_position_mode(hedged: bool, symbol: str)
+            # hedged=False means One-Way Mode
+            
+            try:
+                await self.exchange.set_position_mode(hedged=False, symbol=self.symbol)
+                logger.info(f"✅ Position Mode set to ONE-WAY for {self.symbol}")
+                return True
+            except Exception as e:
+                if "not modified" in str(e) or "already" in str(e):
+                     logger.info(f"✅ {self.symbol} is already in ONE-WAY mode")
+                     return True
+                else:
+                    logger.error(f"❌ Failed to set One-Way Mode: {e}")
+                    return False
+                    
+        except Exception as e:
+            logger.error(f"Error checking/setting position mode: {e}")
+            return False
     
     async def get_current_position(self):
         """
