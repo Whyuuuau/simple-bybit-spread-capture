@@ -568,10 +568,10 @@ class BitunixExchange:
         """Fetch Open Orders"""
         clean_symbol = symbol.replace('/', '').replace(':', '').split('USDT')[0] + 'USDT'
         
-        # Endpoint: /futures/trade/open_orders
+        # Endpoint: /futures/trade/get_pending_orders (CORRECTED per docs)
         try:
              # Params usually symbol needed
-             data = await self._request('GET', '/futures/trade/open_orders', params={'symbol': clean_symbol, 'limit': 100}, signed=True)
+             data = await self._request('GET', '/futures/trade/get_pending_orders', params={'symbol': clean_symbol}, signed=True)
         except Exception:
              return []
         

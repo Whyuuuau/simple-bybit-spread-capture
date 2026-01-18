@@ -426,7 +426,7 @@ class HybridVolumeBot:
                     usage = (used / tot) * 100
                     if usage > 80:
                         logger.warning(f"🚨 MARGIN CRITICAL: Usage {usage:.1f}% > 80%. HALTING ORDERS.")
-                        await self.trading.cancel_all_orders(self.exchange, self.symbol)
+                        await cancel_all_orders(self.exchange, self.symbol)
                         logger.warning("❄️ Cooling down to release margin...")
                         return
             except Exception as e:
