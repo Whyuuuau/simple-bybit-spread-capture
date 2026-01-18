@@ -341,6 +341,10 @@ class FuturesPositionManager:
                         break
             
             # Close position with opposite order
+            # CRITICAL: Bitunix uses NON-STANDARD logic!
+            # side parameter = POSITION SIDE (not trade direction)
+            # Close LONG = side="BUY", tradeSide="CLOSE"
+            # Close SHORT = side="SELL", tradeSide="CLOSE"
             try:
                 close_params = {'reduceOnly': True}
                 if position_id:
@@ -348,9 +352,9 @@ class FuturesPositionManager:
                     logger.debug(f"Using positionId: {position_id} for CLOSE order")
                 
                 if position['side'] == 'long':
-                    # Close long = sell
-                    action = 'sell'
-                    order = await self.exchange.create_market_sell_order(
+                    # Close long = BUY (Bitunix non-standard!)
+                    action = 'buy'
+                    order = await self.exchange.create_market_buy_order(
                         self.symbol,
                         amount_to_close,
                         params=close_params
@@ -358,9 +362,9 @@ class FuturesPositionManager:
                     logger.info(f"✅ Closed LONG position: {amount_to_close} contracts")
                 
                 elif position['side'] == 'short':
-                    # Close short = buy
-                    action = 'buy'
-                    order = await self.exchange.create_market_buy_order(
+                    # Close short = SELL (Bitunix non-standard!)
+                    action = 'sell'
+                    order = await self.exchange.create_market_sell_order(
                         self.symbol,
                         amount_to_close,
                         params=close_params
@@ -368,26 +372,26 @@ class FuturesPositionManager:
                     logger.info(f"✅ Closed SHORT position: {amount_to_close} contracts")
                     
             except Exception as e:
-                # Handle 110017 (reduce-only order has same side with current position)
-                # This happens if bot thinks Long but actual is Short (or vice versa)
+                # Handle errors - but note Bitunix uses different side logic
                 if "110017" in str(e) or "reduce-only" in str(e):
                     logger.warning(f"⚠️ Side Mismatch Detected! Flipping action... (Error: {str(e)[:100]})")
                     
-                    if position['side'] == 'long': # Was sell, try buy
-                        order = await self.exchange.create_market_buy_order(
-                            self.symbol,
-                            amount_to_close,
-                            params={'reduceOnly': True}
-                        )
-                        logger.info(f"✅ Retry Successful: Closed SHORT position (flipped)")
-                        
-                    else: # Was buy, try sell
+                    # Flip the action (though this shouldn't happen with correct logic)
+                    if position['side'] == 'long':
                         order = await self.exchange.create_market_sell_order(
                             self.symbol,
                             amount_to_close,
                             params={'reduceOnly': True}
                         )
                         logger.info(f"✅ Retry Successful: Closed LONG position (flipped)")
+                    
+                    else:
+                        order = await self.exchange.create_market_buy_order(
+                            self.symbol,
+                            amount_to_close,
+                            params={'reduceOnly': True}
+                        )
+                        logger.info(f"✅ Retry Successful: Closed SHORT position (flipped)")
                 else:
                     raise e
             
