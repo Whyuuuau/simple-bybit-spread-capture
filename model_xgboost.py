@@ -111,26 +111,35 @@ def train_xgboost_model(X_train, y_train, X_test, y_test, model_path='models/'):
     # ================================================================
     # SMOTE: Fix Class Imbalance! ✅
     # ================================================================
-    logger.info("Applying SMOTE to balance classes...")
+    # ================================================================
+    # SMOTE: Fix Class Imbalance! ✅
+    # ================================================================
+    # logger.info("Applying SMOTE to balance classes...")
     
-    try:
-        from imblearn.over_sampling import SMOTE
-        
-        # Apply SMOTE
-        smote = SMOTE(random_state=42, k_neighbors=min(5, pos_samples-1) if pos_samples > 1 else 1)
-        X_train_balanced, y_train_balanced = smote.fit_resample(X_train, y_train)
-        
-        pos_after = y_train_balanced.sum()
-        logger.info(f"✅ SMOTE applied:")
-        logger.info(f"   Before: {pos_samples}/{len(y_train)} positive ({pos_samples/len(y_train)*100:.1f}%)")
-        logger.info(f"   After: {pos_after}/{len(y_train_balanced)} positive ({pos_after/len(y_train_balanced)*100:.1f}%)")
-        logger.info(f"   Generated {pos_after - pos_samples} synthetic samples")
-        
-    except ImportError:
-        logger.warning("⚠️ SMOTE not available. Run: pip install imbalanced-learn")
-        logger.warning("   Training without SMOTE (may have poor recall for profitable trades)")
-        X_train_balanced = X_train
-        y_train_balanced = y_train
+    # DISABLE SMOTE to prevent OOM / Killed process on VPS
+    # XGBoost handles imbalance well with scale_pos_weight
+    logger.info("⚠️ SMOTE disabled to prevent OOM on VPS (using scale_pos_weight instead)")
+    X_train_balanced = X_train
+    y_train_balanced = y_train
+    
+    # try:
+    #     from imblearn.over_sampling import SMOTE
+    #     
+    #     # Apply SMOTE
+    #     smote = SMOTE(random_state=42, k_neighbors=min(5, pos_samples-1) if pos_samples > 1 else 1)
+    #     X_train_balanced, y_train_balanced = smote.fit_resample(X_train, y_train)
+    #     
+    #     pos_after = y_train_balanced.sum()
+    #     logger.info(f"✅ SMOTE applied:")
+    #     logger.info(f"   Before: {pos_samples}/{len(y_train)} positive ({pos_samples/len(y_train)*100:.1f}%)")
+    #     logger.info(f"   After: {pos_after}/{len(y_train_balanced)} positive ({pos_after/len(y_train_balanced)*100:.1f}%)")
+    #     logger.info(f"   Generated {pos_after - pos_samples} synthetic samples")
+    #     
+    # except ImportError:
+    #     logger.warning("⚠️ SMOTE not available. Run: pip install imbalanced-learn")
+    #     logger.warning("   Training without SMOTE (may have poor recall for profitable trades)")
+    #     X_train_balanced = X_train
+    #     y_train_balanced = y_train
     
     # ================================================================
     # Train Model
