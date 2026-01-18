@@ -377,8 +377,21 @@ class PnLTracker:
             dict: PnL metrics including matched trade profit
         """
         try:
-            # Get trades (more accurate than orders)
+            # Get trades (try provided symbol first)
             trades = await exchange.fetch_my_trades(symbol, limit=500)
+            
+            # If empty, try alternative symbol formats (common issue with CCXT/Bybit)
+            if not trades and ':' in symbol:
+                alt_symbol = symbol.split(':')[0] # e.g. SOL/USDT
+                trades = await exchange.fetch_my_trades(alt_symbol, limit=500)
+                
+            if not trades:
+                base_only = symbol.split('/')[0] + 'USDT' # e.g. SOLUSDT
+                try: 
+                    trades = await exchange.fetch_my_trades(base_only, limit=500)
+                except: pass
+            
+            logger.info(f"🔎 PnL Debug: Fetched {len(trades)} trades for {symbol}")
             
             total_volume = 0
             trade_count = 0
