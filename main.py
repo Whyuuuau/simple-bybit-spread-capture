@@ -521,11 +521,18 @@ class HybridVolumeBot:
                 self.symbol
             )
             
-            self.stats['total_volume'] = pnl_data['total_volume']
-            self.stats['total_trades'] = pnl_data['trade_count']
-            self.stats['total_fees'] = pnl_data['total_fees']
-            self.stats['net_pnl'] = pnl_data.get('realized_pnl', pnl_data.get('estimated_pnl', 0))
-            self.stats['orders_filled'] = pnl_data['trade_count']  # ✅ Track filled orders
+            # Accumulate/Update stats (Prevent reset to 0 on API error)
+            if pnl_data['total_volume'] > 0:
+                self.stats['total_volume'] = max(self.stats['total_volume'], pnl_data['total_volume'])
+            
+            if pnl_data['trade_count'] > 0:
+                self.stats['total_trades'] = max(self.stats['total_trades'], pnl_data['trade_count'])
+                self.stats['orders_filled'] = self.stats['total_trades'] # Sync filled orders
+            
+            # PnL can be negative, so we update it directly but check validity
+            if pnl_data['total_volume'] > 0 or pnl_data['realized_pnl'] != 0:
+                self.stats['net_pnl'] = pnl_data.get('realized_pnl', 0)
+                self.stats['total_fees'] = pnl_data.get('total_fees', 0)
             
         except Exception as e:
             logger.error(f"Error updating statistics: {e}")
