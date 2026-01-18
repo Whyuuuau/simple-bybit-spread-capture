@@ -90,7 +90,7 @@ class BitunixExchange:
             # Drop None values
             params = {k: v for k, v in params.items() if v is not None}
             # Create query string for URL
-            url += "?" + urllib.parse.urlencode(params)
+            url += "?" + urlencode(params)
         
         # Handle Body
         json_body = None
