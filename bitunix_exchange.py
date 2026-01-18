@@ -581,13 +581,19 @@ class BitunixExchange:
              logger.error(f"fetch_open_orders error: {e}")
              return []
         
-        logger.debug(f"🔍 Raw API response type: {type(data)}, is_list: {isinstance(data, list)}")
+        logger.debug(f"🔍 Raw API response type: {type(data)}, keys: {data.keys() if isinstance(data, dict) else 'N/A'}")
         
         orders = []
-        if isinstance(data, list):
-            logger.debug(f"🔍 Processing {len(data)} orders from API")
-            for o in data:
+        
+        # CRITICAL FIX: Bitunix returns {"data": {"orderList": [...], "total": N}}
+        # NOT just an array!
+        if isinstance(data, dict) and 'orderList' in data:
+            order_list = data['orderList']
+            logger.debug(f"🔍 Processing {len(order_list)} orders from data.orderList")
+            
+            for o in order_list:
                 # Mapping side/type back
+                # Bitunix uses: side=1(BUY)/2(SELL), orderType=1(LIMIT)/2(MARKET)
                 s_map = {1: 'buy', 2: 'sell'}
                 t_map = {1: 'limit', 2: 'market'}
                 
@@ -599,8 +605,8 @@ class BitunixExchange:
                     'type': t_map.get(o.get('orderType'), 'limit'),
                     'price': float(o.get('price', 0)),
                     'amount': float(o.get('qty', 0)),
-                    'filled': float(o.get('cumQty', 0)),
-                    'timestamp': o.get('createTime') or o.get('ctime')
+                    'filled': float(o.get('tradeQty', 0)),
+                    'timestamp': o.get('ctime')
                 })
         
         logger.info(f"✅ fetch_open_orders returning {len(orders)} orders")
