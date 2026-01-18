@@ -116,7 +116,8 @@ class BitunixExchange:
             
         try:
             # Use 'data' with pre-serialized string to ensure signature match
-            async with self.session.request(method, url, headers=headers, params=params, data=body_str_for_sign if body else None) as response:
+            # CRITICAL FIX: Pass params=None because we already appended them to 'url' above!
+            async with self.session.request(method, url, headers=headers, params=None, data=body_str_for_sign if body else None) as response:
                 text = await response.text()
                 try:
                     data = json.loads(text)
