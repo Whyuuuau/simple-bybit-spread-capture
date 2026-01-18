@@ -436,6 +436,7 @@ class BitunixExchange:
         body = {
             'symbol': clean_symbol,
             'side': side_map[side.lower()],
+            'tradeSide': 'OPEN', # Mandatory!
             'orderType': type_map[type.lower()],
             'qty': qty_str
         }
@@ -443,12 +444,14 @@ class BitunixExchange:
         # Optional params
         if params.get('reduceOnly'):
             body['reduceOnly'] = True
+            body['tradeSide'] = 'CLOSE' # If reduceOnly, it's a close
             
         if type.lower() == 'limit':
             if not price:
                 raise Exception("Price required for limit order")
             body['price'] = f"{float(price):.{p_prec}f}"
             body['effect'] = 'GTC'
+        
         
         
             
