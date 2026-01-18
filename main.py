@@ -447,7 +447,7 @@ class HybridVolumeBot:
                 self.exchange,
                 self.symbol,
                 target_orders,
-                price_tolerance_pct=0.1
+                price_tolerance_pct=0.02  # High sensitivity (0.02%) for sticky orders
             )
             
             self.stats['orders_placed'] += stats['placed']

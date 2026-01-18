@@ -135,7 +135,7 @@ num_orders = 10  # Reduced to 10 (Total 20) to respect Rate Limits with 0.1 SOL 
 ORDER_BOOK_DEPTH = 20  # Number of levels to fetch from order book
 
 # Order refresh settings
-ORDER_REFRESH_INTERVAL = 15  # Refresh every 15 seconds (Even slower for stability)
+ORDER_REFRESH_INTERVAL = 5   # Refresh every 5 seconds (Aggressive Chart Tracking)
 DATA_UPDATE_INTERVAL = 60  # Update historical data every 60 seconds
 
 # ============================================================================
