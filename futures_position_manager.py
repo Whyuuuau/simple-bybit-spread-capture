@@ -393,6 +393,9 @@ class FuturesPositionManager:
             
             position_size = abs(position['position_size'])
             
+            # Enforce precision
+            position_size = calc_sol_size(position_size, 1.0) # Price dummy
+            
             if position['side'] == 'long':
                 # Close long
                 order = await self.exchange.create_market_sell_order(

@@ -18,8 +18,9 @@ def calc_sol_size(amount_crypto, current_price):
         float: Rounded amount (>= 0.1)
     """
     # Precision based on TICK_SIZE logic
-    # For SOL, precision is 0.01 or 0.1
-    precision = 2 # 0.01
+    # For SOL on Bybit Futures, precision often defaults to 0.1 or 0.01
+    # Logs show 0.15 failing but 0.1 working -> Precision is likely 0.1 (1 decimal)
+    precision = 1 # 0.1 (Strict Mode)
     
     rounded_amount = round(amount_crypto, precision)
     
