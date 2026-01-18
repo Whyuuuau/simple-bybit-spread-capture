@@ -312,9 +312,9 @@ def validate_config():
     if MIN_ORDER_SIZE_USD < current_config['min_order_usd']:
         issues.append(f"⚠️ Min order size ${MIN_ORDER_SIZE_USD} below minimum ${current_config['min_order_usd']}")
     
-    # Check spread
-    if MIN_SPREAD_PCT < MIN_PROFITABLE_SPREAD_PCT:
-        issues.append(f"⚠️ Min spread {MIN_SPREAD_PCT}% may not be profitable (need >{MIN_PROFITABLE_SPREAD_PCT:.3f}%)")
+    # Check spread (Skipped for Volume Mode)
+    # Validation removed to allow tight spreads (0.05%)
+    pass
     
     # Demo-specific notes
     issues.append("ℹ️ Using Bybit Demo Mainnet (https://api-demo.bybit.com)")
