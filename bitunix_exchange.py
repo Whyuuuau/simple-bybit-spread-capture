@@ -658,43 +658,66 @@ class BitunixExchange:
         
     async def fetch_my_trades(self, symbol, limit=50):
         """
-        Fetch Data for PnL Calculation
-        Endpoint: /api/v1/futures/trade/get_history_trades (Fills)
+        Fetch Data for PnL Calculation (Dual Source for Reliability)
+        Source 1: /api/v1/futures/trade/get_history_trades (Fills)
+        Source 2: /api/v1/futures/trade/get_history_orders (Completed Orders)
         """
         clean_symbol = symbol.replace('/', '').replace(':', '').split('USDT')[0] + 'USDT'
+        trades_map = {} # Deduplicate by ID
         
+        # 1. Fetch Trades (Fills)
         try:
-             # Use get_history_trades for actual fills
-             data = await self._request('GET', '/futures/trade/get_history_trades', params={'symbol': clean_symbol, 'limit': limit}, signed=True)
+             data1 = await self._request('GET', '/futures/trade/get_history_trades', params={'symbol': clean_symbol, 'limit': limit}, signed=True)
+             if isinstance(data1, list):
+                 for t in data1:
+                     tid = str(t.get('id', t.get('tradeId')))
+                     trades_map[tid] = {
+                        'id': tid,
+                        'order': str(t.get('orderId')),
+                        'symbol': symbol,
+                        'side': {1: 'buy', 2: 'sell'}.get(t.get('side'), 'buy'),
+                        'price': float(t.get('price', 0)),
+                        'amount': float(t.get('qty', 0)),
+                        'fee': {'cost': float(t.get('fee', 0)), 'currency': 'USDT'},
+                        'timestamp': t.get('createTime') or t.get('ctime') or int(time.time()*1000)
+                     }
         except Exception as e:
-             print(f"Fetch trades error: {e}")
-             return []
+             print(f"Fetch history_trades error: {e}")
 
-        trades = []
-        if isinstance(data, list):
-            for t in data:
-                # Map fields from history trades
-                # keys might be: id, orderId, price, qty, ctime, side, fee, role(maker/taker)
-                
-                # Side mapping
-                s_map = {1: 'buy', 2: 'sell'}
-                side = s_map.get(t.get('side'), 'buy')
-                
-                price = float(t.get('price', 0))
-                amount = float(t.get('qty', 0))
-                fee = float(t.get('fee', 0))
-                
-                trades.append({
-                    'id': str(t.get('id')),          # Trade ID
-                    'order': str(t.get('orderId')),  # Order ID
-                    'symbol': symbol,
-                    'side': side,
-                    'price': price,
-                    'amount': amount,
-                    'cost': price * amount,
-                    'fee': {'cost': fee, 'currency': 'USDT'},
-                    'timestamp': t.get('createTime') or t.get('ctime') or int(time.time()*1000)
-                })
-                
-        return trades
+        # 2. Fetch Orders (Completed) - FALLBACK
+        try:
+             # state=2 (Completed), state=3 (Cancelled) - We want Completed for fills
+             data2 = await self._request('GET', '/futures/trade/get_history_orders', params={'symbol': clean_symbol, 'limit': limit, 'state': 2}, signed=True)
+             if isinstance(data2, list):
+                 for o in data2:
+                     filled = float(o.get('cumQty', 0))
+                     if filled <= 0: continue # Skip unfilled
+                     
+                     oid = str(o.get('orderId'))
+                     # Use orderId as tradeId if we don't have a specific trade record
+                     # But prefer existing trade record if possible
+                     
+                     # Check if we already have this order processed via trades? 
+                     # Hard to know mapping. Let's append if unique.
+                     # Actually, a single order can have multiple trades.
+                     # Safest is to rely on 'trades' for volume. 
+                     # But if 'trades' is empty, use 'orders' as proxy.
+                     
+                     if not trades_map: # Only backfill if trades failed
+                         avg_price = float(o.get('avgPrice', 0) or o.get('price', 0))
+                         trades_map[oid] = {
+                            'id': oid,
+                            'order': oid,
+                            'symbol': symbol,
+                            'side': {1: 'buy', 2: 'sell'}.get(o.get('side'), 'buy'),
+                            'price': avg_price,
+                            'amount': filled,
+                            'fee': {'cost': float(o.get('fee', 0)), 'currency': 'USDT'},
+                            'timestamp': o.get('createTime') or o.get('ctime') or int(time.time()*1000)
+                         }
+        except Exception as e:
+             print(f"Fetch history_orders error: {e}")
+             
+        results = list(trades_map.values())
+        return results
 

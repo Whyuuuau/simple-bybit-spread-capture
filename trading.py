@@ -318,6 +318,14 @@ async def smart_order_management(exchange, symbol, target_orders, price_toleranc
     """
     open_orders = await get_open_orders(exchange, symbol)
     
+    # SAFETY: Prevent "Order Stacking" / Ghost Orders
+    # If we have way more orders than targets, something is wrong. Wipe and reset.
+    if len(open_orders) > len(target_orders) * 2:
+        logger.warning(f"🧹 CROWD CONTROL: Found {len(open_orders)} orders (Target {len(target_orders)}). Force clearing...")
+        await cancel_all_orders(exchange, symbol)
+        # Re-fetch or assume empty (safer to assume empty and place fresh)
+        open_orders = [] 
+        
     stats = {'cancelled': 0, 'placed': 0, 'kept': 0}
     
     # Cancel orders that don't match targets
