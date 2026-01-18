@@ -71,8 +71,13 @@ class BitunixExchange:
         
         url = f"{self.base_url}{endpoint}"
         headers = {
-            'Content-Type': 'application/json'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
+        
+        # Only add Content-Type for non-GET or if body exists
+        if method != 'GET' or body:
+            headers['Content-Type'] = 'application/json'
+        
         
         # Prepare params and body for signature
         query_str_for_sign = ""
