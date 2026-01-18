@@ -61,10 +61,10 @@ def add_stochastic_rsi(df, period=14):
     rsi = calculate_rsi(df['close'], period)
     df['rsi'] = rsi  # IMPORTANT: Save RSI column
     
-    stoch_rsi = (rsi - rsi.rolling(period).min()) / (rsi.rolling(period).max() - rsi.rolling(period).min())
-    df['stoch_rsi'] = stoch_rsi
-    df['stoch_rsi_k'] = stoch_rsi.rolling(3).mean()
-    df['stoch_rsi_d'] = df['stoch_rsi_k'].rolling(3).mean()
+    stoch_rsi = (rsi - rsi.rolling(period).min()) / ((rsi.rolling(period).max() - rsi.rolling(period).min()) + 1e-10)
+    df['stoch_rsi'] = stoch_rsi.fillna(0) # Fill NaNs just in case
+    df['stoch_rsi_k'] = stoch_rsi.rolling(3).mean().fillna(0)
+    df['stoch_rsi_d'] = df['stoch_rsi_k'].rolling(3).mean().fillna(0)
     return df
 
 def add_ichimoku(df):
@@ -110,14 +110,13 @@ def add_volume_indicators(df):
     df['volume_ma_10'] = df['volume'].rolling(10).mean()
     df['volume_ma_20'] = df['volume'].rolling(20).mean()
     df['volume_ratio'] = df['volume'] / (df['volume_ma_20'] + 1e-10) # Matches name
-    df['volume_roc'] = df['volume'].pct_change(10)
+    # Safe ROC
+    df['volume_roc'] = df['volume'].pct_change(10).replace([np.inf, -np.inf], 0).fillna(0)
     
     # VWAP Safe Calculation
     vol_cumsum = df['volume'].cumsum()
     df['vwap'] = (df['close'] * df['volume']).cumsum() / (vol_cumsum + 1e-10)
     
-    # If volume is all zero, vwap will be 0 (or large if 1e-10 is small divisor of 0?) 
-    # Actually if vol is 0, numerator is 0, denominator is 1e-10. Result 0. Correct.
     return df
 
 def add_volatility_indicators(df):
@@ -139,8 +138,8 @@ def add_volatility_indicators(df):
     bb_std = df['close'].rolling(20).std()
     bb_upper = bb_middle + (bb_std * 2)
     bb_lower = bb_middle - (bb_std * 2)
-    df['bb_width'] = (bb_upper - bb_lower) / bb_middle
-    df['bb_position'] = (df['close'] - bb_lower) / (bb_upper - bb_lower)
+    df['bb_width'] = (bb_upper - bb_lower) / (bb_middle + 1e-10) # Safe division
+    df['bb_position'] = (df['close'] - bb_lower) / ((bb_upper - bb_lower) + 1e-10) # Safe division
     return df
 
 def add_price_patterns(df):
@@ -149,8 +148,8 @@ def add_price_patterns(df):
     df['lower_low'] = (df['low'] < df['low'].shift(1)).astype(int)
     df['higher_close'] = (df['close'] > df['close'].shift(1)).astype(int)
     
-    df['candle_body'] = abs(df['close'] - df['open']) / df['open']
-    df['lower_shadow'] = (df[['open', 'close']].min(axis=1) - df['low']) / df['open']
+    df['candle_body'] = abs(df['close'] - df['open']) / (df['open'] + 1e-10)
+    df['lower_shadow'] = (df[['open', 'close']].min(axis=1) - df['low']) / (df['open'] + 1e-10)
     return df
 
 def add_gacor_features(df):
@@ -159,9 +158,9 @@ def add_gacor_features(df):
     Focuses on Velocity, Volume Shocks, and Micro-Volatility
     """
     # 1. Micro-Velocity (Rate of Change)
-    df['roc_1'] = df['close'].pct_change(1) * 100
-    df['roc_3'] = df['close'].pct_change(3) * 100
-    df['roc_5'] = df['close'].pct_change(5) * 100
+    df['roc_1'] = df['close'].pct_change(1).fillna(0) * 100
+    df['roc_3'] = df['close'].pct_change(3).fillna(0) * 100
+    df['roc_5'] = df['close'].pct_change(5).fillna(0) * 100
     
     # 2. Volume Shock (Relative Volume)
     vol_ma5 = df['volume'].rolling(5).mean()
@@ -188,7 +187,7 @@ def add_all_features(df):
     print("Adding advanced features...")
     df = df.copy()
     
-    # 1. Add Legacy Features (Fixes 'not in index' errors)
+    # 1. Add Legacy Features
     df = add_legacy_features(df)
     print("✓ Legacy features (Returns, Momentum, etc)")
     
@@ -207,6 +206,13 @@ def add_all_features(df):
         df['is_ny_session'] = ((df['hour'] >= 13) & (df['hour'] < 21)).astype(int)
     else:
         df['is_ny_session'] = 0
+        
+    # CHECK FOR NANS
+    cols_with_nan = df.columns[df.isna().any()].tolist()
+    if cols_with_nan:
+        print(f"⚠️ Columns with NaNs before drop: {cols_with_nan}")
+        # Optional: Print how many
+        print(df[cols_with_nan].isna().sum())
         
     df = df.dropna()
     print(f"✓ Feature engineering complete: {len(df.columns)} columns")
