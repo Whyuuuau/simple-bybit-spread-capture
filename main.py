@@ -443,6 +443,11 @@ class HybridVolumeBot:
                 skew=skew
             )
             
+            # SAFETY CHECK: If we couldn't get valid prices (e.g. empty orderbook), abort
+            if not buy_prices or not sell_prices or len(buy_prices) < num_orders:
+                logger.warning(f"⚠️ Skipping order placement: Insufficient price levels calculated ({len(buy_prices) if buy_prices else 0}/{num_orders})")
+                return
+
             # Calculate order sizes (returns SOL amounts directly)
             buy_sizes, sell_sizes = await self.calculate_order_sizes(position_value)
             
@@ -776,6 +781,31 @@ class HybridVolumeBot:
         
         try:
             logger.info("🚀 Bot starting main loop...")
+
+            # DEBUG: Log all available markets to diagnose symbol issues
+            try:
+                logger.info("🔎 Fetching all markets to verify symbol...")
+                markets = await self.exchange.fetch_markets()
+                tickers = markets if isinstance(markets, list) else []
+                logger.info(f"🔎 DEBUG: Found {len(tickers)} markets")
+                
+                # Check for SOL
+                sol_pairs = [t for t in tickers if 'SOL' in t.get('symbol', '').upper()]
+                sol_symbols = [t['symbol'] for t in sol_pairs]
+                logger.info(f"🔎 DEBUG: SOL Pairs found: {sol_symbols}")
+                
+                 # Explicit check for configured symbol
+                configured_clean = self.symbol.replace('/', '').replace(':', '').split('USDT')[0] + 'USDT'
+                found = any(t['symbol'] == configured_clean for t in tickers)
+                
+                if found:
+                     logger.info(f"✅ Configured symbol '{configured_clean}' FOUND in market list.")
+                else:
+                     logger.error(f"❌ Configured symbol '{configured_clean}' NOT FOUND. Available SOL pairs: {sol_symbols}")
+
+            except Exception as e:
+                logger.error(f"Failed to fetch market list on startup: {e}")
+
             
             while self.running:
                 loop_start = asyncio.get_event_loop().time()

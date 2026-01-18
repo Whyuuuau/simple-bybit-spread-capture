@@ -119,6 +119,7 @@ class BitunixExchange:
                     raise Exception(f"Bitunix Response Error: {text}")
                 
                 if data.get('code') != 0:
+                    print(f"❌ API Request Failed: URL={url} | Params={params} | Body={body_str_for_sign}")
                     raise Exception(f"Bitunix API Error {data.get('code')}: {data.get('msg')}")
                 
                 return data['data']
@@ -131,6 +132,11 @@ class BitunixExchange:
     # Public Methods
     # ==========================================================
     
+    async def fetch_markets(self):
+        """Fetch all available markets"""
+        data = await self._request('GET', '/futures/market/tickers')
+        return data
+
     async def fetch_ticker(self, symbol):
         """
         Get ticker. Note: Bitunix symbols usually formatted like 'ETHUSDT'
@@ -201,8 +207,10 @@ class BitunixExchange:
         """
         clean_symbol = symbol.replace('/', '').replace(':', '').split('USDT')[0] + 'USDT'
         
-        # Max limit per request (Bitunix usually caps at 1000)
-        MAX_LIMIT_PER_REQ = 1000
+        
+        # Max limit per request (Bitunix usually caps at 1000, reducing to 500 for safety)
+        MAX_LIMIT_PER_REQ = 500
+        
         
         # Prepare timeframe in ms for pagination calculations
         tf_ms_map = {
