@@ -325,15 +325,35 @@ class FuturesPositionManager:
             if amount_to_close <= 0:
                 return False
             
+            # CRITICAL: Get positionId for hedge mode closing
+            # Fetch raw positions to get positionId
+            raw_positions = await self.exchange.fetch_positions([self.symbol])
+            position_id = None
+            
+            for p in raw_positions:
+                if p['symbol'] == self.symbol:
+                    # Match the side we're closing
+                    if position['side'] == 'long' and p['side'] == 'long':
+                        position_id = p.get('positionId')
+                        break
+                    elif position['side'] == 'short' and p['side'] == 'short':
+                        position_id = p.get('positionId')
+                        break
+            
             # Close position with opposite order
             try:
+                close_params = {'reduceOnly': True}
+                if position_id:
+                    close_params['positionId'] = position_id
+                    logger.debug(f"Using positionId: {position_id} for CLOSE order")
+                
                 if position['side'] == 'long':
                     # Close long = sell
                     action = 'sell'
                     order = await self.exchange.create_market_sell_order(
                         self.symbol,
                         amount_to_close,
-                        params={'reduceOnly': True}
+                        params=close_params
                     )
                     logger.info(f"✅ Closed LONG position: {amount_to_close} contracts")
                 
@@ -343,7 +363,7 @@ class FuturesPositionManager:
                     order = await self.exchange.create_market_buy_order(
                         self.symbol,
                         amount_to_close,
-                        params={'reduceOnly': True}
+                        params=close_params
                     )
                     logger.info(f"✅ Closed SHORT position: {amount_to_close} contracts")
                     

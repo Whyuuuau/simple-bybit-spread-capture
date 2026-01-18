@@ -482,6 +482,13 @@ class BitunixExchange:
             # body['reduceOnly'] = True  <-- CAUSES ERROR 10002! Bitunix uses tradeSide only.
             body['tradeSide'] = 'CLOSE' # If reduceOnly, it's a close
             
+            # CRITICAL: positionId is REQUIRED when tradeSide='CLOSE' in hedge mode
+            position_id = params.get('positionId')
+            if position_id:
+                body['positionId'] = str(position_id)
+            else:
+                logger.warning("⚠️ CLOSE order without positionId - may fail in hedge mode!")
+            
         if type.lower() == 'limit':
             if not price:
                 raise Exception("Price required for limit order")
@@ -647,7 +654,8 @@ class BitunixExchange:
                 'liquidationPrice': float(p.get('liqPrice') or 0),
                 'leverage': float(p.get('leverage') or 0),
                 'initialMargin': float(p.get('margin') or 0),
-                'side': side_key
+                'side': side_key,
+                'positionId': p.get('positionId', '')  # REQUIRED for CLOSE orders in hedge mode
             })
         
         return positions
