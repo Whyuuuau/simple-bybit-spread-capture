@@ -423,12 +423,13 @@ class HybridVolumeBot:
             # Calculate Trend Skew (Critical for avoiding Floating Loss)
             # Bullish -> Skew > 0 -> Buy Closer, Sell Higher
             # Bearish -> Skew < 0 -> Buy Lower (Safety), Sell Closer (Dump)
+            # REDUCED SKEW to 0.2 (from 0.6) to prevent "Catching Knives"
             skew = 0
             if self.use_ml:
                 if self.current_signal == 'BULLISH':
-                    skew = 0.6 * self.signal_confidence # Strong Bull skew
+                    skew = 0.2 * self.signal_confidence # Gentle Bull bias
                 elif self.current_signal == 'BEARISH':
-                    skew = -0.6 * self.signal_confidence # Strong Bear protection
+                    skew = -0.2 * self.signal_confidence # Gentle Bear bias
             
             # Find optimal price levels with SKEW
             buy_prices, sell_prices = find_optimal_price_levels(

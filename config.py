@@ -137,7 +137,7 @@ ORDER_BOOK_DEPTH = 20  # Number of levels to fetch from order book
 
 # Order refresh settings
 # Order refresh settings
-ORDER_REFRESH_INTERVAL = 3   # Refresh every 3 seconds (TURBO MODE)
+ORDER_REFRESH_INTERVAL = 1   # Refresh every 1 second (HYPER SPEED)
 DATA_UPDATE_INTERVAL = 60  # Update historical data every 60 seconds
 
 # ============================================================================
@@ -148,7 +148,7 @@ DATA_UPDATE_INTERVAL = 60  # Update historical data every 60 seconds
 # Spread settings (optimized for fees)
 # Spread settings (optimized for fees)
 # Fees: Maker 0.02% x 2 = 0.04% Roundtrip.
-MIN_SPREAD_PCT = 0.05   # 0.05% (VOLUME MODE: Razor Thin for Max Fills)
+MIN_SPREAD_PCT = 0.08   # 0.08% (Break-Even Churn: 0.07% Fees + 0.01% Buffer)
 MAX_SPREAD_PCT = 0.20   # 0.20% maximum
 TARGET_SPREAD_MULTIPLIER = 1.0  # Use full spread width
 
@@ -173,7 +173,7 @@ BASE_ORDER_SIZE_USD = 150  # Target Grid Size $150 (5 orders x $30)
 MAX_DAILY_LOSS_USD = -50   # Increased risk tolerance
 MAX_TOTAL_LOSS_USD = -80   # Emergency stop at $80 loss
 STOP_LOSS_PCT = 4.0        # 4% stop loss per position
-TAKE_PROFIT_PCT = 0.001    # 0.1% Take Profit (Volume Mode: Quick churn for $1M target)
+TAKE_PROFIT_PCT = 0.0008   # 0.08% Take Profit (Break-Even Turnover)
 
 # ============================================================================
 # VOLUME TARGETS
