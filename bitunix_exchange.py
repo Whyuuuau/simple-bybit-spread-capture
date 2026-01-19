@@ -188,16 +188,12 @@ class BitunixExchange:
             # Fetching depth every ticker call is expensive. Let's rely on 'last' for approximation
             # OR - use the known working depth endpoint if bid/ask are strictly needed.
             
-            if bid == 0 or ask == 0:
-                 # Fast depth check for better precision
-                 try:
-                     depth = await self._request('GET', '/futures/market/depth', params={'symbol': clean_symbol, 'limit': 5})
-                     bids = depth.get('bids', [])
-                     asks = depth.get('asks', [])
-                     if bids: bid = float(bids[0][0])
-                     if asks: ask = float(asks[0][0])
-                 except:
-                     pass # Fallback to last
+            # FIXED: Don't fetch depth (saves API calls, reduces rate limit violations)
+            # Use 'last' price approximation instead
+            if bid == 0: 
+                bid = last * 0.9995  # Approximate bid as 0.05% below last
+            if ask == 0: 
+                ask = last * 1.0005  # Approximate ask as 0.05% above last
             
             # Final Fallback
             if bid == 0: bid = last

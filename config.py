@@ -36,19 +36,17 @@ MAX_LEVERAGE = 50
 # ORDER SETTINGS
 # ============================================================================
 
-num_orders = 5 
+num_orders = 4  # Hybrid: Balance between coverage and management
 ORDER_BOOK_DEPTH = 20 
 
-ORDER_REFRESH_INTERVAL = 1   
-DATA_UPDATE_INTERVAL = 60  
+ORDER_REFRESH_INTERVAL = 3   # Reduced from 1 to avoid rate limits (10 req/sec)
+DATA_UPDATE_INTERVAL = 120  # Reduced from 60 to minimize API calls  
 
 # ============================================================================
-# SPREAD & PRICING
-# ============================================================================
-
-MIN_SPREAD_PCT = 0.10   # Widened to 0.10% to guarantee profit above fees (0.07% worst case)
-MAX_SPREAD_PCT = 0.15   # Tighter cap
-TARGET_SPREAD_MULTIPLIER = 1.0  
+# SPREAD & PRICING (HYBRID STRATEGY: Volume + Profit Optimized)
+MIN_SPREAD_PCT = 0.12   # Hybrid: Profitable in all scenarios, good fill rate
+MAX_SPREAD_PCT = 0.20   # Adaptive ceiling for volatile markets
+TARGET_SPREAD_MULTIPLIER = 1.0  # Base multiplier  
 
 # ============================================================================
 # POSITION & RISK MANAGEMENT
@@ -58,12 +56,12 @@ MAX_POSITION_SIZE_USD = 200  # Lowered from 450 to prevent margin lock with smal
 POSITION_REBALANCE_THRESHOLD_USD = 100  # Lowered from 250 to trigger earlier rebalance
 POSITION_CHECK_INTERVAL = 5  
 
-MIN_ORDER_SIZE_USD = 5    # Reduced for smaller 100 START balance
-MAX_ORDER_SIZE_USD = 50   # Reduced for smaller 100 START balance
-BASE_ORDER_SIZE_USD = 40  # Increased to $40 to achieve higher volume (approx $8/order)
+MIN_ORDER_SIZE_USD = 5    # Minimum notional
+MAX_ORDER_SIZE_USD = 150  # Increased for volume acceleration
+BASE_ORDER_SIZE_USD = 120  # HYBRID: Optimized for volume + profit (was 80)
 
-MAX_DAILY_LOSS_USD = -20   
-MAX_TOTAL_LOSS_USD = -50   
+MAX_DAILY_LOSS_USD = -10   # SAFETY: Stop if lose $10
+MAX_TOTAL_LOSS_USD = -20   # SAFETY: Stop if total loss > $20
 STOP_LOSS_PCT = 4.0        
 TAKE_PROFIT_PCT = 0.0015   
 
@@ -113,7 +111,7 @@ INITIAL_BALANCE_USD = 100
 ENABLE_EMERGENCY_STOP = True
 EMERGENCY_STOP_LOSS_PCT = 15.0
 
-STATS_LOG_INTERVAL = 5     
+STATS_LOG_INTERVAL = 10    # Reduced from 5 to minimize API calls
 PERFORMANCE_CHECK_INTERVAL = 300
 
 # ============================================================================

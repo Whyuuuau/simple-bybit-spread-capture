@@ -22,18 +22,30 @@ def calc_sol_size(amount_crypto, current_price, min_size=MIN_ORDER_SIZE_SOL):
     Returns:
         float: Rounded amount (>= min_size)
     """
-    # Precision based on config
-    # Bitunix usually 0.1 or 0.01 for main coins
+    # Precision based on config (1 decimal for SOL)
     precision = 1
     
     rounded_amount = round(amount_crypto, precision)
     
-    # Ensure minimum amount
+    # CRITICAL FIX: Enforce minimum amount STRICTLY
     if rounded_amount < min_size:
+        logger.warning(f"⚠️ Order size {rounded_amount:.1f} < {min_size} SOL minimum, adjusting to {min_size}")
         rounded_amount = min_size
     
-    # Check notional value
+    # CRITICAL FIX: Check notional value ($5 minimum per Bitunix requirements)
     notional_value = rounded_amount * current_price
+    MIN_NOTIONAL_USD = 5.0
+    
+    if notional_value < MIN_NOTIONAL_USD:
+        # Recalculate to meet minimum notional
+        required_amount = MIN_NOTIONAL_USD / current_price
+        rounded_amount = round(required_amount, precision)
+        
+        # Ensure still meets minimum size
+        if rounded_amount < min_size:
+            rounded_amount = min_size
+        
+        logger.warning(f"⚠️ Notional ${notional_value:.2f} < ${MIN_NOTIONAL_USD}, adjusted to {rounded_amount:.1f} SOL")
     
     return rounded_amount
 
@@ -406,9 +418,9 @@ async def smart_order_management(exchange, symbol, target_orders, price_toleranc
         results = await asyncio.gather(*batch, return_exceptions=True)
         stats['placed'] += sum(1 for r in results if r is not None and not isinstance(r, Exception))
         
-        # Throttle between batches
+        # Throttle between batches (FIXED: increased from 50ms to 500ms)
         if i + BATCH_SIZE < len(tasks_to_run):
-            await asyncio.sleep(0.05) # Tiny buffer (50ms) for 5-order bursts
+            await asyncio.sleep(0.5)  # 500ms buffer to avoid rate limits
     
     logger.debug(f"Order management | Kept: {stats['kept']} | Cancelled: {stats['cancelled']} | Placed: {stats['placed']}")
     
@@ -441,7 +453,8 @@ class PnLTracker:
         """
         try:
             # Get trades (try provided symbol first)
-            trades = await exchange.fetch_my_trades(symbol, limit=500)
+            # FIXED: Reduced limit from 500 to 50 to avoid rate limits
+            trades = await exchange.fetch_my_trades(symbol, limit=50)
             
             # If empty, try alternative symbol formats
             if not trades and ':' in symbol:

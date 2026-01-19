@@ -115,6 +115,7 @@ class HybridVolumeBot:
         self.last_ml_update = 0
         self.last_stats_log = 0
         self.last_position_check = 0
+        self.last_stats_update = 0  # FIXED: Added for stats throttling
         
         # Market data cache
         self.historical_data = None
@@ -868,8 +869,10 @@ class HybridVolumeBot:
                     await self.check_and_manage_position()
                     self.last_position_check = loop_start
                 
-                # Update statistics
-                await self.update_statistics()
+                # Update statistics (FIXED: Throttled to every 10 seconds instead of every loop)
+                if loop_start - self.last_stats_update > 10:
+                    await self.update_statistics()
+                    self.last_stats_update = loop_start
                 
                 # Check safety limits
                 if not self.check_safety_limits():

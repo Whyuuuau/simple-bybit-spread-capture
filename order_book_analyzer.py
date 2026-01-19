@@ -191,6 +191,71 @@ def find_optimal_price_levels(order_book, num_orders, spread_pct, symbol_precisi
     return buy_prices, sell_prices
 
 
+def find_maker_only_price_levels(order_book, num_orders, min_spread_pct, symbol_precision=None):
+    """
+    Calculate price levels that GUARANTEE maker execution (no crossing spread)
+    
+    This ensures all orders get maker fee (0.02%) instead of taker fee (0.05%)
+    
+    Args:
+        order_book: Order book dict
+        num_orders: Number of orders per side
+        min_spread_pct: Minimum spread percentage
+        symbol_precision: Price precision for rounding
+    
+    Returns:
+        tuple: (buy_prices, sell_prices)
+    """
+    if not order_book['bids'] or not order_book['asks']:
+        return [], []
+    
+    best_bid = order_book['bids'][0][0]
+    best_ask = order_book['asks'][0][0]
+    
+    # Calculate tick size from order book
+    if len(order_book['bids']) > 1:
+        tick_size = abs(order_book['bids'][0][0] - order_book['bids'][1][0])
+    else:
+        tick_size = best_bid * 0.0001  # 0.01% default
+    
+    buy_prices = []
+    sell_prices = []
+    
+    for i in range(num_orders):
+        # Place buy orders BELOW best bid (maker)
+        # Each order is (i+1) ticks below best bid
+        buy_price = best_bid - ((i + 1) * tick_size)
+        
+        # Place sell orders ABOVE best ask (maker)
+        # Each order is (i+1) ticks above best ask
+        sell_price = best_ask + ((i + 1) * tick_size)
+        
+        # Ensure minimum spread is maintained
+        mid_price = (best_bid + best_ask) / 2
+        min_spread_decimal = min_spread_pct / 100
+        
+        # Validate buy price isn't too close to mid
+        min_buy_price = mid_price * (1 - min_spread_decimal / 2)
+        buy_price = min(buy_price, min_buy_price)
+        
+        # Validate sell price isn't too close to mid
+        min_sell_price = mid_price * (1 + min_spread_decimal / 2)
+        sell_price = max(sell_price, min_sell_price)
+        
+        # Round to exchange precision if provided
+        if symbol_precision:
+            buy_price = round(buy_price, symbol_precision)
+            sell_price = round(sell_price, symbol_precision)
+        
+        buy_prices.append(buy_price)
+        sell_prices.append(sell_price)
+    
+    logger.debug(f"MAKER-ONLY levels | Buy: {buy_prices[0]:.6f} (below bid {best_bid:.6f}) | "
+                f"Sell: {sell_prices[0]:.6f} (above ask {best_ask:.6f})")
+    
+    return buy_prices, sell_prices
+
+
 def analyze_order_book_imbalance(order_book, depth=10):
     """
     Analyze order book imbalance to detect potential price movements
@@ -302,3 +367,36 @@ async def get_comprehensive_market_analysis(exchange, symbol, depth=20):
                 f"Imbalance: {imbalance['signal']} | Pressure: {pressure:.2f}")
     
     return analysis
+
+
+def is_order_pair_profitable(buy_price, sell_price, maker_fee_pct=0.02, taker_fee_pct=0.05):
+    """
+    Check if an order pair will be profitable after fees
+    
+    Assumes worst case: 1 maker order + 1 taker order
+    
+    Args:
+        buy_price: Buy order price
+        sell_price: Sell order price
+        maker_fee_pct: Maker fee percentage (default 0.02%)
+        taker_fee_pct: Taker fee percentage (default 0.05%)
+    
+    Returns:
+        tuple: (is_profitable, expected_profit_pct, spread_pct)
+    """
+    if buy_price <= 0 or sell_price <= buy_price:
+        return False, 0, 0
+    
+    # Calculate spread
+    spread_pct = ((sell_price - buy_price) / buy_price) * 100
+    
+    # Worst case fees: 1 maker + 1 taker
+    worst_case_fees_pct = (maker_fee_pct + taker_fee_pct) / 100
+    
+    # Expected profit = spread - fees
+    expected_profit_pct = spread_pct - (worst_case_fees_pct * 100)
+    
+    # Profitable if expected profit > 0
+    is_profitable = expected_profit_pct > 0
+    
+    return is_profitable, expected_profit_pct, spread_pct

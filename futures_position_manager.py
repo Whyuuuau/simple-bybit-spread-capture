@@ -213,9 +213,9 @@ class FuturesPositionManager:
                 **result
             })
             
-            # Keep only last 1000 records
-            if len(self.position_history) > 1000:
-                self.position_history = self.position_history[-1000:]
+            # Keep only last 100 records (FIXED: reduced from 1000 to optimize memory)
+            if len(self.position_history) > 100:
+                self.position_history = self.position_history[-100:]
             
             return result
             
@@ -314,26 +314,32 @@ class FuturesPositionManager:
             # Short sleep to ensure cancellation propagates
             await asyncio.sleep(0.5)
             
-            # Calculate amount to close (Soft Rebalance: 25% to nibble down position)
-            # Was 90% -> Too aggressive for losing positions
-            raw_amount = abs(position_size) * 0.25 
+            # Calculate amount to close (FIXED: Increased from 25% to 50% for more aggressive rebalancing)
+            # Was 25% -> Too conservative, led to "Insufficient amount" errors
+            raw_amount = abs(position_size) * 0.50  # 50% rebalancing
             approx_price = position_value / abs(position_size) if abs(position_size) > 0 else 0
             
             # Ensure valid precision and min size
             amount_to_close = calc_sol_size(raw_amount, approx_price)
             
-            # CRITICAL: Check if amount meets minimum order size
-            # Bitunix SOL minimum is typically 0.1
-            if amount_to_close < 0.1:
-                logger.warning(f"⚠️ Rebalance amount {amount_to_close} < 0.1 SOL minimum. Skipping.")
-                return False
+            # CRITICAL FIX: Validate BEFORE attempting API call
+            MIN_CLOSE_SIZE = 0.1  # Bitunix minimum
+            if amount_to_close < MIN_CLOSE_SIZE:
+                logger.warning(f"⚠️ Rebalance amount {amount_to_close:.1f} < {MIN_CLOSE_SIZE} SOL minimum.")
+                # Try closing entire position instead
+                amount_to_close = abs(position_size)
+                amount_to_close = calc_sol_size(amount_to_close, approx_price)
+                
+                if amount_to_close < MIN_CLOSE_SIZE:
+                    logger.error(f"❌ Even full position {amount_to_close:.1f} < minimum. Cannot rebalance.")
+                    return False
             
             if amount_to_close <= 0:
                 logger.warning("⚠️ Calculated close amount is zero. Skipping rebalance.")
                 return False
             
-            # CRITICAL: Get positionId for hedge mode closing
-            # Fetch raw positions to get positionId
+            # CRITICAL FIX: Always fetch positionId for hedge mode
+            # Fetch raw positions to get positionId (REQUIRED for CLOSE orders)
             raw_positions = await self.exchange.fetch_positions([self.symbol])
             position_id = None
             
@@ -342,10 +348,16 @@ class FuturesPositionManager:
                     # Match the side we're closing
                     if position['side'] == 'long' and p['side'] == 'long':
                         position_id = p.get('positionId')
+                        logger.info(f"✅ Found LONG positionId: {position_id}")
                         break
                     elif position['side'] == 'short' and p['side'] == 'short':
                         position_id = p.get('positionId')
+                        logger.info(f"✅ Found SHORT positionId: {position_id}")
                         break
+            
+            if not position_id:
+                logger.error(f"❌ positionId not found for {position['side'].upper()} position! Cannot close.")
+                return False
             
             # Close position with opposite order
             # CRITICAL: Bitunix uses NON-STANDARD logic!
