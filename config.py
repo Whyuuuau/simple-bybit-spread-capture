@@ -36,29 +36,29 @@ MAX_LEVERAGE = 50
 # ORDER SETTINGS
 # ============================================================================
 
-num_orders = 2  # SURVIVAL: Only 2 orders to minimize risk (was 3)
+num_orders = 3  # BALANCED: More coverage (was 2)
 ORDER_BOOK_DEPTH = 20 
 
-ORDER_REFRESH_INTERVAL = 10   # SURVIVAL: Very slow (was 5)
-DATA_UPDATE_INTERVAL = 300  # SURVIVAL: Minimize API calls (was 180)  
+ORDER_REFRESH_INTERVAL = 5   # BALANCED: Moderate speed (was 10)
+DATA_UPDATE_INTERVAL = 180  # Keep API calls low  
 
 # ============================================================================
-# SPREAD & PRICING (SURVIVAL MODE: <$50 Equity Emergency)
-MIN_SPREAD_PCT = 0.25   # VERY WIDE for maximum safety (was 0.20)
-MAX_SPREAD_PCT = 0.50   # Allow very wide spreads (was 0.40)
-TARGET_SPREAD_MULTIPLIER = 2.0  # Strongly prefer wider spreads  
+# SPREAD & PRICING (BALANCED MODE: Better Fill Rate)
+MIN_SPREAD_PCT = 0.15   # BALANCED: Profitable + Good fills (was 0.25)
+MAX_SPREAD_PCT = 0.30   # Reasonable ceiling (was 0.50)
+TARGET_SPREAD_MULTIPLIER = 1.2  # Slightly prefer wider  
 
 # ============================================================================
 # POSITION & RISK MANAGEMENT
 # ============================================================================
 
-MAX_POSITION_SIZE_USD = 30  # SURVIVAL: Tiny position limit (was 80)
-POSITION_REBALANCE_THRESHOLD_USD = 20  # SURVIVAL: Rebalance very early (was 60)
+MAX_POSITION_SIZE_USD = 120  # EMERGENCY FIX: Raised to accommodate current $93 position
+POSITION_REBALANCE_THRESHOLD_USD = 100  # EMERGENCY FIX: Raised above current position
 POSITION_CHECK_INTERVAL = 5  
 
-MIN_ORDER_SIZE_USD = 15    # SURVIVAL: Higher minimum for safety
-MAX_ORDER_SIZE_USD = 40   # SURVIVAL: Very small cap (was 120)
-BASE_ORDER_SIZE_USD = 30  # SURVIVAL: Tiny orders for <$50 equity (was 100)
+MIN_ORDER_SIZE_USD = 15    # Keep minimum for safety
+MAX_ORDER_SIZE_USD = 50   # BALANCED: Slightly larger (was 40)
+BASE_ORDER_SIZE_USD = 35  # BALANCED: Moderate size (was 30)
 
 MAX_DAILY_LOSS_USD = -2   # SURVIVAL: Stop at ANY loss (was -5)
 MAX_TOTAL_LOSS_USD = -5   # SURVIVAL: Absolute emergency stop (was -10)
