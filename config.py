@@ -36,33 +36,33 @@ MAX_LEVERAGE = 50
 # ORDER SETTINGS
 # ============================================================================
 
-num_orders = 4  # Hybrid: Balance between coverage and management
+num_orders = 2  # SURVIVAL: Only 2 orders to minimize risk (was 3)
 ORDER_BOOK_DEPTH = 20 
 
-ORDER_REFRESH_INTERVAL = 3   # Reduced from 1 to avoid rate limits (10 req/sec)
-DATA_UPDATE_INTERVAL = 120  # Reduced from 60 to minimize API calls  
+ORDER_REFRESH_INTERVAL = 10   # SURVIVAL: Very slow (was 5)
+DATA_UPDATE_INTERVAL = 300  # SURVIVAL: Minimize API calls (was 180)  
 
 # ============================================================================
-# SPREAD & PRICING (HYBRID STRATEGY: Volume + Profit Optimized)
-MIN_SPREAD_PCT = 0.12   # Hybrid: Profitable in all scenarios, good fill rate
-MAX_SPREAD_PCT = 0.20   # Adaptive ceiling for volatile markets
-TARGET_SPREAD_MULTIPLIER = 1.0  # Base multiplier  
+# SPREAD & PRICING (SURVIVAL MODE: <$50 Equity Emergency)
+MIN_SPREAD_PCT = 0.25   # VERY WIDE for maximum safety (was 0.20)
+MAX_SPREAD_PCT = 0.50   # Allow very wide spreads (was 0.40)
+TARGET_SPREAD_MULTIPLIER = 2.0  # Strongly prefer wider spreads  
 
 # ============================================================================
 # POSITION & RISK MANAGEMENT
 # ============================================================================
 
-MAX_POSITION_SIZE_USD = 200  # Lowered from 450 to prevent margin lock with small equity
-POSITION_REBALANCE_THRESHOLD_USD = 100  # Lowered from 250 to trigger earlier rebalance
+MAX_POSITION_SIZE_USD = 30  # SURVIVAL: Tiny position limit (was 80)
+POSITION_REBALANCE_THRESHOLD_USD = 20  # SURVIVAL: Rebalance very early (was 60)
 POSITION_CHECK_INTERVAL = 5  
 
-MIN_ORDER_SIZE_USD = 5    # Minimum notional
-MAX_ORDER_SIZE_USD = 150  # Increased for volume acceleration
-BASE_ORDER_SIZE_USD = 120  # HYBRID: Optimized for volume + profit (was 80)
+MIN_ORDER_SIZE_USD = 15    # SURVIVAL: Higher minimum for safety
+MAX_ORDER_SIZE_USD = 40   # SURVIVAL: Very small cap (was 120)
+BASE_ORDER_SIZE_USD = 30  # SURVIVAL: Tiny orders for <$50 equity (was 100)
 
-MAX_DAILY_LOSS_USD = -10   # SAFETY: Stop if lose $10
-MAX_TOTAL_LOSS_USD = -20   # SAFETY: Stop if total loss > $20
-STOP_LOSS_PCT = 4.0        
+MAX_DAILY_LOSS_USD = -2   # SURVIVAL: Stop at ANY loss (was -5)
+MAX_TOTAL_LOSS_USD = -5   # SURVIVAL: Absolute emergency stop (was -10)
+STOP_LOSS_PCT = 1.0        # SURVIVAL: Very tight stop (was 2.0)
 TAKE_PROFIT_PCT = 0.0015   
 
 # ============================================================================
