@@ -39,26 +39,26 @@ MAX_LEVERAGE = 50
 num_orders = 3  # BALANCED: More coverage (was 2)
 ORDER_BOOK_DEPTH = 20 
 
-ORDER_REFRESH_INTERVAL = 5   # BALANCED: Moderate speed (was 10)
-DATA_UPDATE_INTERVAL = 180  # Keep API calls low  
+ORDER_REFRESH_INTERVAL = 3   # VOLUME: Fast refresh for more opportunities
+DATA_UPDATE_INTERVAL = 180  # Keep API calls reasonable  
 
 # ============================================================================
-# SPREAD & PRICING (BALANCED MODE: Better Fill Rate)
-MIN_SPREAD_PCT = 0.15   # BALANCED: Profitable + Good fills (was 0.25)
-MAX_SPREAD_PCT = 0.30   # Reasonable ceiling (was 0.50)
-TARGET_SPREAD_MULTIPLIER = 1.2  # Slightly prefer wider  
+# SPREAD & PRICING (VOLUME OPTIMIZED: Fast $1M Target)
+MIN_SPREAD_PCT = 0.12   # Optimal: Profitable + High fill rate (50%)
+MAX_SPREAD_PCT = 0.25   # Reasonable ceiling
+TARGET_SPREAD_MULTIPLIER = 1.0  # Base multiplier  
 
 # ============================================================================
 # POSITION & RISK MANAGEMENT
 # ============================================================================
 
-MAX_POSITION_SIZE_USD = 120  # EMERGENCY FIX: Raised to accommodate current $93 position
-POSITION_REBALANCE_THRESHOLD_USD = 100  # EMERGENCY FIX: Raised above current position
+MAX_POSITION_SIZE_USD = 120  # Allow larger positions
+POSITION_REBALANCE_THRESHOLD_USD = 60  # VOLUME: Early rebalance to prevent accumulation
 POSITION_CHECK_INTERVAL = 5  
 
-MIN_ORDER_SIZE_USD = 15    # Keep minimum for safety
-MAX_ORDER_SIZE_USD = 50   # BALANCED: Slightly larger (was 40)
-BASE_ORDER_SIZE_USD = 35  # BALANCED: Moderate size (was 30)
+MIN_ORDER_SIZE_USD = 15    # Minimum for safety
+MAX_ORDER_SIZE_USD = 50   # Allow larger for volume
+BASE_ORDER_SIZE_USD = 40  # VOLUME OPTIMIZED: $40 for maximum volume generation
 
 MAX_DAILY_LOSS_USD = -2   # SURVIVAL: Stop at ANY loss (was -5)
 MAX_TOTAL_LOSS_USD = -5   # SURVIVAL: Absolute emergency stop (was -10)

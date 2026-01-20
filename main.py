@@ -381,13 +381,35 @@ class HybridVolumeBot:
                         buy_size_usd *= 1.2
                         sell_size_usd *= 0.8
                 
-                # ML signal adjustments
-                if self.current_signal == 'BULLISH':
-                    buy_size_usd *= 1.3
-                    sell_size_usd *= 0.7
-                elif self.current_signal == 'BEARISH':
-                    sell_size_usd *= 1.3
-                    buy_size_usd *= 0.7
+                
+                # ML signal adjustments - DISABLED to prevent position imbalance
+                # The position-aware logic above (line 374-382) already handles rebalancing
+                # ML bias was causing LONG accumulation when signal is BEARISH
+                # if self.current_signal == 'BULLISH':
+                #     buy_size_usd *= 1.3
+                #     sell_size_usd *= 0.7
+                # elif self.current_signal == 'BEARISH':
+                #     sell_size_usd *= 1.3
+                #     buy_size_usd *= 0.7
+                
+                # TREND-AWARE SIZING (Prevent position accumulation)
+                if hasattr(self, 'historical_data') and self.historical_data is not None:
+                    try:
+                        recent_prices = self.historical_data['close'].tail(10).values
+                        if len(recent_prices) >= 10:
+                            trend_pct = (recent_prices[-1] - recent_prices[0]) / recent_prices[0]
+                            
+                            if trend_pct < -0.005:  # DOWNTREND > 0.5%
+                                # Reduce BUY to prevent LONG accumulation
+                                buy_size_usd *= 0.6
+                                logger.info(f"📉 DOWNTREND ({trend_pct:.2%}): Reducing BUY orders to prevent LONG accumulation")
+                                
+                            elif trend_pct > 0.005:  # UPTREND > 0.5%
+                                # Reduce SELL to prevent SHORT accumulation
+                                sell_size_usd *= 0.6
+                                logger.info(f"📈 UPTREND ({trend_pct:.2%}): Reducing SELL orders to prevent SHORT accumulation")
+                    except Exception as e:
+                        logger.debug(f"Trend detection skipped: {e}")
                 
                 # Convert USD to ETH amount and round properly
                 buy_amount_eth = calc_sol_size(buy_size_usd / current_price, current_price)
